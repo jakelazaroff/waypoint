@@ -12,9 +12,11 @@
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "^3.0.0",
+		"@mapbox/search-js-core": "1.0.0-beta.18",
+		"@sveltejs/adapter-static": "^3.0.1",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
+		"@types/mapbox-gl": "^2.7.19",
 		"prettier": "^3.1.1",
 		"prettier-plugin-svelte": "^3.1.2",
 		"svelte": "^5.0.0-next.1",
@@ -25,6 +27,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"leaflet": "^1.9.4"
+		"@mapbox/search-js-web": "1.0.0-beta.18",
+		"mapbox-gl": "^3.1.0"
 	}
 }

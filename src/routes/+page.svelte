@@ -2,6 +2,7 @@
   import "~/style/style.css";
   import Map from "~/component/Map.svelte";
   import Search from "~/component/Search.svelte";
+  import Outline from "~/component/Outline.svelte";
   import type { Place } from "~/lib/place";
 
   let places = $state<Place[]>([]);
@@ -9,7 +10,7 @@
 
 <div class="wrapper">
   <div class="data">
-    <Search
+    <!-- <Search
       onretrieve={place => {
         console.log(place);
         places = [...places, place];
@@ -19,7 +20,8 @@
       {#each places as place}
         <li>{place.name}</li>
       {/each}
-    </ul>
+    </ul> -->
+    <Outline />
   </div>
   <Map {places} />
 </div>
@@ -35,5 +37,6 @@
 
   .data {
     padding: 1rem;
+    display: grid;
   }
 </style>

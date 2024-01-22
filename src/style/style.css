@@ -1,6 +1,11 @@
+@import "./fonts.css";
 @import "./reset.css";
 
 html,
 body {
   height: 100%;
+}
+
+body {
+  font-family: "Overpass", sans-serif;
 }

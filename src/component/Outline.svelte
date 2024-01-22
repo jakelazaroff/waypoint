@@ -1,0 +1,90 @@
+<script lang="ts">
+  import { schema as basic } from "prosemirror-schema-basic";
+  import { EditorState } from "prosemirror-state";
+  import { Schema } from "prosemirror-model";
+  import { baseKeymap, toggleMark } from "prosemirror-commands";
+  import { EditorView } from "prosemirror-view";
+  import { undo, redo, history } from "prosemirror-history";
+  import { keymap } from "prosemirror-keymap";
+  import { addListNodes, liftListItem, sinkListItem, splitListItem } from "prosemirror-schema-list";
+  import {
+    inputRules,
+    wrappingInputRule,
+    smartQuotes,
+    emDash,
+    ellipsis,
+    undoInputRule
+  } from "prosemirror-inputrules";
+  import "prosemirror-view/style/prosemirror.css";
+
+  let el = $state<HTMLElement>();
+
+  const schema = new Schema({
+    nodes: addListNodes(basic.spec.nodes, "paragraph block*", "block"),
+    marks: basic.spec.marks
+  });
+
+  let prose = EditorState.create({
+    schema,
+    plugins: [
+      history(),
+      keymap({
+        "Mod-z": undo,
+        "Mod-y": redo,
+        "Mod-b": toggleMark(schema.marks.strong),
+        "Mod-i": toggleMark(schema.marks.em),
+        Backspace: undoInputRule,
+        Enter: splitListItem(schema.nodes.list_item),
+        "Mod-]": sinkListItem(schema.nodes.list_item),
+        Tab: sinkListItem(schema.nodes.list_item),
+        "Mod-[": liftListItem(schema.nodes.list_item),
+        "Shift+Tab": liftListItem(schema.nodes.list_item)
+      }),
+      keymap(baseKeymap),
+      inputRules({
+        rules: [
+          ...smartQuotes,
+          emDash,
+          ellipsis,
+          wrappingInputRule(
+            /^(\d+)\.\s$/,
+            schema.nodes.ordered_list,
+            match => ({ order: +match[1] }),
+            (match, node) => node.childCount + node.attrs.order == +match[1]
+          ),
+          wrappingInputRule(/^\s*([-+*])\s$/, schema.nodes.bullet_list)
+        ]
+      })
+    ]
+  });
+
+  let view = new EditorView(null, {
+    state: prose
+  });
+
+  $effect(() => {
+    if (!el) return;
+
+    view = new EditorView(el, { state: prose });
+    return () => view.destroy();
+  });
+</script>
+
+<div class="outline" bind:this={el}></div>
+
+<style>
+  .outline {
+    all: unset;
+    height: 100%;
+    display: grid;
+  }
+
+  .outline :global(:where(ol, ul)) {
+    list-style: revert;
+    margin-inline-start: 1.5em;
+  }
+
+  .outline :global(.ProseMirror):focus-visible {
+    outline: 0;
+  }
+</style>

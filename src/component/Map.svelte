@@ -56,23 +56,61 @@
     };
   }
 
+  let placeids = new Set<string>([]);
+  function intersection<T>(set1: Set<T>, set2: Set<T>): Set<T> {
+    const result = new Set<T>();
+
+    const small = set1.size <= set2.size ? set1 : set2;
+    const large = small === set1 ? set2 : set1;
+
+    for (const value of small) {
+      if (large.has(value)) result.add(value);
+    }
+
+    return result;
+  }
+
   $effect(() => {
     if (!places.length) return;
 
     const markers = places.map(place => new mapboxgl.Marker().setLngLat(place.position).addTo(map));
 
-    const { ne, sw } = boundingBox(places.map(place => place.position));
-    map.fitBounds([ne, sw], { padding: 100, maxZoom: 12, duration: 1000 });
+    const ids = new Set(places.map(place => place.mapboxId));
+    if (ids.size !== placeids.size || intersection(placeids, ids).size !== ids.size) {
+      placeids = ids;
+      const { ne, sw } = boundingBox(places.map(place => place.position));
+      map.fitBounds([ne, sw], { padding: 100, maxZoom: 12, duration: 1000 });
+    }
 
     return () => markers.forEach(marker => marker.remove());
   });
 </script>
 
-<div class="map" bind:this={el}></div>
+<div class="wrapper">
+  <button
+    class="reset"
+    onclick={() => {
+      const { ne, sw } = boundingBox(places.map(place => place.position));
+      map.fitBounds([ne, sw], { padding: 100, maxZoom: 12, duration: 1000 });
+    }}>reset view</button
+  >
+  <div class="map" bind:this={el}></div>
+</div>
 
 <style>
+  .wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
   .map {
     width: 100%;
     height: 100%;
+  }
+
+  .reset {
+    position: absolute;
+    z-index: 1;
   }
 </style>

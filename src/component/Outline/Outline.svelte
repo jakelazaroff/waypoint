@@ -28,6 +28,7 @@
     if (!doc.type) return;
     prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
     view.updateState(prose);
+    _document = view.state.toJSON().doc;
   }
 
   let el = $state<HTMLElement>();

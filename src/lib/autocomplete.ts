@@ -64,6 +64,8 @@ export function autocomplete(options: AutocompleteOptions) {
       },
 
       apply(tr, _state) {
+        if (tr.getMeta("reset")) return defaultState();
+
         const next = defaultState();
         const selection = tr.selection;
         if (selection.from !== selection.to) return next;
@@ -86,8 +88,8 @@ export function autocomplete(options: AutocompleteOptions) {
       handleKeyDown(view, evt) {
         switch (evt.key) {
           case "Escape":
-            const state = (this.state = defaultState());
-            opts.onInput(state?.text ?? "");
+            view.dispatch(view.state.tr.setMeta(key, "reset"));
+            opts.onInput("");
             return true;
         }
       },

@@ -62,7 +62,7 @@
     const markers = places.map(place => new mapboxgl.Marker().setLngLat(place.position).addTo(map));
 
     const { ne, sw } = boundingBox(places.map(place => place.position));
-    map.fitBounds([ne, sw], { padding: 150, maxZoom: 12, duration: 1000 });
+    map.fitBounds([ne, sw], { padding: 100, maxZoom: 12, duration: 1000 });
 
     return () => markers.forEach(marker => marker.remove());
   });

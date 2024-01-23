@@ -7,7 +7,7 @@
 
   let center = $state<Coordinate>([0, 0]);
 
-  let document = $state<any>({});
+  let doc = $state<any>({});
   let outline = $state<Outline>();
   onMount(() => {
     const json = localStorage.getItem("travel");
@@ -18,7 +18,7 @@
   });
 
   $effect(() => {
-    localStorage.setItem("travel", JSON.stringify(document));
+    localStorage.setItem("travel", JSON.stringify(doc));
   });
 
   function getPlaces(node: any): Place[] {
@@ -26,12 +26,40 @@
     return (node?.content || []).flatMap((node: any) => getPlaces(node));
   }
 
-  let places = $derived(getPlaces(document));
+  let places = $derived(getPlaces(doc));
 </script>
 
 <div class="wrapper">
   <div class="data">
-    <Outline {center} bind:this={outline} bind:document />
+    <div class="toolbar">
+      <button
+        onclick={() => {
+          const filename = prompt("enter a filename");
+          if (!filename) return;
+
+          const a = document.createElement("a");
+          const file = new Blob([JSON.stringify(doc)], { type: "application/json" });
+          a.href = URL.createObjectURL(file);
+          a.download = `${filename}.json`;
+          console.log(a);
+          a.click();
+        }}
+      >
+        save
+      </button>
+      <input
+        type="file"
+        onchange={async e => {
+          const file = e.currentTarget.files?.[0];
+          if (!file) return;
+          const json = await file.text();
+          const doc = JSON.parse(json);
+          outline?.load(doc);
+          e.currentTarget.value = "";
+        }}
+      />
+    </div>
+    <Outline {center} bind:this={outline} bind:document={doc} />
   </div>
   <Map {places} bind:center />
 </div>
@@ -47,6 +75,9 @@
 
   .data {
     display: grid;
+    grid-template:
+      "toolbar" auto
+      "outline" 1fr;
     overflow: hidden;
   }
 </style>

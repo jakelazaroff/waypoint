@@ -1,6 +1,6 @@
 <script lang="ts">
   import { schema as basic } from "prosemirror-schema-basic";
-  import { EditorState } from "prosemirror-state";
+  import { EditorState, type EditorStateConfig } from "prosemirror-state";
   import { Node, Schema } from "prosemirror-model";
   import { baseKeymap, toggleMark } from "prosemirror-commands";
   import { EditorView } from "prosemirror-view";
@@ -25,8 +25,9 @@
 
   let { center, document: _document } = $props<{ center: Coordinate; document: unknown }>();
   export function load(doc: any) {
-    const tr = prose.tr.replaceWith(0, prose.doc.content.size, Node.fromJSON(schema, doc));
-    view.dispatch(tr);
+    if (!doc.type) return;
+    prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
+    view.updateState(prose);
   }
 
   let el = $state<HTMLElement>();
@@ -39,7 +40,7 @@
     marks: basic.spec.marks
   });
 
-  let prose = EditorState.create({
+  const config: EditorStateConfig = {
     schema,
     plugins: [
       autocomplete({
@@ -81,9 +82,10 @@
         ]
       })
     ]
-  });
+  };
 
-  let view = new EditorView(null, { state: prose });
+  let prose = $state(EditorState.create(config));
+  let view = $state<EditorView>()!!!;
 
   $effect(() => {
     if (!el) return;

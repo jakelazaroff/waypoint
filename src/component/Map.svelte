@@ -6,20 +6,27 @@
 
   import { PUBLIC_MAPBOX_TOKEN } from "$env/static/public";
 
-  import type { Place, BoundingBox } from "~/lib/place";
+  import type { Place, BoundingBox, Coordinate } from "~/lib/place";
 
-  let { places, bounds } = $props<{ places: Place[]; bounds: BoundingBox }>();
+  let {
+    places,
+    bounds: _bounds,
+    center: _center
+  } = $props<{ places: Place[]; bounds?: BoundingBox; center?: Coordinate }>();
 
   mapboxgl.accessToken = PUBLIC_MAPBOX_TOKEN;
 
   let el = $state<HTMLElement>();
   let map: mapboxgl.Map;
 
-  function syncBounds() {
+  function syncPosition() {
+    const c = map.getCenter();
+    _center = [c.lng, c.lat];
+
     const bbox = map.getBounds();
     const sw = bbox.getSouthWest();
     const ne = bbox.getNorthEast();
-    bounds = [
+    _bounds = [
       [sw.lng, sw.lat],
       [ne.lng, ne.lat]
     ];
@@ -35,8 +42,8 @@
       zoom: 7
     });
 
-    map.on("moveend", syncBounds);
-    syncBounds();
+    map.on("moveend", syncPosition);
+    syncPosition();
   });
 
   function boundingBox(coords: [longitude: number, latitude: number][]) {

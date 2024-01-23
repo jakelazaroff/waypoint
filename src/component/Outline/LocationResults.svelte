@@ -2,22 +2,22 @@
   import { SearchBoxCore, SessionToken, type SearchBoxSuggestion } from "@mapbox/search-js-core";
 
   import { PUBLIC_MAPBOX_TOKEN } from "$env/static/public";
-  import type { BoundingBox, Place } from "~/lib/place";
+  import type { Coordinate, Place } from "~/lib/place";
 
   interface Props {
     query: string;
     onselect(place: Place): void;
-    bounds?: BoundingBox;
+    center?: Coordinate;
   }
 
-  const { query, bounds, onselect } = $props<Props>();
+  const { query, center, onselect } = $props<Props>();
 
   const search = new SearchBoxCore({ accessToken: PUBLIC_MAPBOX_TOKEN });
   const sessionToken = new SessionToken();
   let suggestions = $state<SearchBoxSuggestion[]>([]);
 
   $effect(() => {
-    search.suggest(query, { sessionToken, limit: 10, bbox: bounds }).then(res => {
+    search.suggest(query, { sessionToken, limit: 10, proximity: center }).then(res => {
       suggestions = res.suggestions;
     });
   });

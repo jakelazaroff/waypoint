@@ -21,9 +21,13 @@
   import { autocomplete, select, addMentionNodes } from "~/lib/autocomplete";
   import "./LocationResults.svelte";
   import LocationResults from "./LocationResults.svelte";
-  import type { BoundingBox } from "~/lib/place";
+  import type { Coordinate } from "~/lib/place";
 
-  let { bounds, document } = $props<{ bounds: BoundingBox; document: unknown }>();
+  let { center, document: _document } = $props<{ center: Coordinate; document: unknown }>();
+  export function load(doc: any) {
+    const tr = prose.tr.replaceWith(0, prose.doc.content.size, Node.fromJSON(schema, doc));
+    view.dispatch(tr);
+  }
 
   let el = $state<HTMLElement>();
   let query = $state("");
@@ -88,7 +92,7 @@
       state: prose,
       dispatchTransaction(tr) {
         view.updateState(view.state.apply(tr));
-        document = view.state.toJSON().doc;
+        _document = view.state.toJSON().doc;
       }
     });
     return () => view.destroy();
@@ -100,7 +104,7 @@
   <div class="results" style:left={position.x + "px"} style:top={position.y + "px"}>
     <LocationResults
       {query}
-      {bounds}
+      {center}
       onselect={place => select(view, { text: place.name, data: place })}
     />
   </div>
@@ -111,15 +115,21 @@
     all: unset;
     height: 100%;
     display: grid;
+    overflow: hidden;
+  }
+
+  .outline :global(.ProseMirror) {
+    padding: 1rem;
+    overflow: auto;
+  }
+
+  .outline :global(.ProseMirror):focus-visible {
+    outline: 0;
   }
 
   .outline :global(:where(ol, ul)) {
     list-style: revert;
     margin-inline-start: 1.5em;
-  }
-
-  .outline :global(.ProseMirror):focus-visible {
-    outline: 0;
   }
 
   .outline :global(pmac-mention) {

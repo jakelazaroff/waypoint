@@ -108,8 +108,10 @@ export function autocomplete(options: AutocompleteOptions) {
         update(view) {
           const state = key.getState(view.state);
 
-          const parent = view.domAtPos(view.state.selection.$from.pos).node as HTMLElement;
-          const node = parent.querySelector<HTMLElement>(opts.mentionTag) ?? undefined;
+          const parent = view.domAtPos(view.state.selection.$from.pos).node;
+          let node: HTMLElement | undefined = undefined;
+          if (parent instanceof HTMLElement)
+            node = parent.querySelector<HTMLElement>(opts.mentionTag) ?? undefined;
 
           opts.onInput(state?.text ?? "", node);
         }

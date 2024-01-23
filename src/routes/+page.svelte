@@ -2,17 +2,28 @@
   import "~/style/style.css";
   import Map from "~/component/Map.svelte";
   import Outline from "~/component/Outline/Outline.svelte";
-  import { type BoundingBox, type Place } from "~/lib/place";
+  import { type Coordinate, type Place } from "~/lib/place";
+  import { onMount } from "svelte";
 
-  let bounds = $state<BoundingBox>([
-    [0, 0],
-    [0, 0]
-  ]);
+  let center = $state<Coordinate>([0, 0]);
 
-  let document = $state<unknown>({});
+  let document = $state<any>({});
+  let outline = $state<Outline>();
+  onMount(() => {
+    const json = localStorage.getItem("travel");
+    if (!json) return;
+
+    const doc = JSON.parse(json);
+    outline?.load(doc);
+  });
+
+  $effect(() => {
+    localStorage.setItem("travel", JSON.stringify(document));
+  });
+
   function getPlaces(node: any): Place[] {
-    if (node.type === "mention") return node.attrs.data;
-    return (node.content || []).flatMap((node: any) => getPlaces(node));
+    if (node?.type === "mention") return node.attrs.data;
+    return (node?.content || []).flatMap((node: any) => getPlaces(node));
   }
 
   let places = $derived(getPlaces(document));
@@ -20,9 +31,9 @@
 
 <div class="wrapper">
   <div class="data">
-    <Outline {bounds} bind:document />
+    <Outline {center} bind:this={outline} bind:document />
   </div>
-  <Map {places} bind:bounds />
+  <Map {places} bind:center />
 </div>
 
 <style>
@@ -35,7 +46,7 @@
   }
 
   .data {
-    padding: 1rem;
     display: grid;
+    overflow: hidden;
   }
 </style>

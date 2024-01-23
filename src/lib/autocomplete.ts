@@ -39,7 +39,7 @@ function defaultState(): State {
 }
 
 interface AutocompleteOptions {
-  mentionTag?: string;
+  tag?: string;
   onInput?(query: string, node?: HTMLElement): void;
 }
 
@@ -50,7 +50,7 @@ const key = new PluginKey<State>();
 
 export function autocomplete(options: AutocompleteOptions) {
   const opts = {
-    mentionTag: "pmac-mention",
+    tag: "pmac-tag",
     onInput: () => {},
     ...options
   };
@@ -94,13 +94,13 @@ export function autocomplete(options: AutocompleteOptions) {
         }
       },
 
-      // decorate the currently active @mention text in ui
+      // decorate the currently active @tag text in ui
       decorations(editor) {
         const state = this.getState(editor);
         if (!state?.active) return null;
 
         return DecorationSet.create(editor.doc, [
-          Decoration.inline(state.range.from, state.range.to, { nodeName: opts.mentionTag })
+          Decoration.inline(state.range.from, state.range.to, { nodeName: opts.tag })
         ]);
       }
     },
@@ -113,7 +113,7 @@ export function autocomplete(options: AutocompleteOptions) {
           const parent = view.domAtPos(view.state.selection.$from.pos).node;
           let node: HTMLElement | undefined = undefined;
           if (parent instanceof HTMLElement)
-            node = parent.querySelector<HTMLElement>(opts.mentionTag) ?? undefined;
+            node = parent.querySelector<HTMLElement>(opts.tag) ?? undefined;
 
           opts.onInput(state?.text ?? "", node);
         }
@@ -124,25 +124,40 @@ export function autocomplete(options: AutocompleteOptions) {
   return plugin;
 }
 
-const mention: NodeSpec = {
+const tag: NodeSpec = {
   group: "inline",
   inline: true,
   atom: true,
   selectable: false,
   draggable: false,
   attrs: { text: {}, data: {} },
-  toDOM: (node: Node) => ["pmac-mention", node.attrs.data, "@" + node.attrs.text]
+  toDOM: (node: Node) => ["pmac-tag", node.attrs.data, "@" + node.attrs.text],
+  parseDOM: [
+    {
+      tag: "pmac-tag",
+      getAttrs: dom => {
+        if (typeof dom === "string") return {};
+
+        const data: { [key: string]: string } = {};
+        for (const attribute of dom.attributes) {
+          data[attribute.name] = attribute.value;
+        }
+
+        return { text: dom.innerText.replace(/^@/, ""), data };
+      }
+    }
+  ]
 };
 
-export function addMentionNodes(nodes: Schema["spec"]["nodes"]) {
-  return nodes.append({ mention });
+export function addTagNodes(nodes: Schema["spec"]["nodes"]) {
+  return nodes.append({ tag });
 }
 
 export function select(view: EditorView, attrs: { text: string; data: unknown }) {
   const state = key.getState(view.state);
   if (!state) return console.warn("No state found for autocomplete plugin");
 
-  const node = view.state.schema.nodes["mention"].create(attrs);
+  const node = view.state.schema.nodes["tag"].create(attrs);
   const tr = view.state.tr.replaceWith(state.range.from, state.range.to, node);
 
   view.dispatch(tr);

@@ -26,7 +26,7 @@
   });
 
   function getPlaces(node: any): Place[] {
-    if (node?.type === "mention") return node.attrs.data;
+    if (node?.type === "tag") return node.attrs.data;
     return (node?.content || []).flatMap((node: any) => getPlaces(node));
   }
 

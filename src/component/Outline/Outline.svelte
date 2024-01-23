@@ -18,7 +18,7 @@
   } from "prosemirror-inputrules";
   import "prosemirror-view/style/prosemirror.css";
 
-  import { autocomplete, select, addMentionNodes } from "~/lib/autocomplete";
+  import { autocomplete, select, addTagNodes } from "~/lib/autocomplete";
   import "./LocationResults.svelte";
   import LocationResults from "./LocationResults.svelte";
   import type { Coordinate } from "~/lib/place";
@@ -44,7 +44,7 @@
   let position = $state({ x: 0, y: 0 });
 
   const schema = new Schema({
-    nodes: addMentionNodes(addListNodes(basic.spec.nodes, "paragraph block*", "block")),
+    nodes: addTagNodes(addListNodes(basic.spec.nodes, "paragraph block*", "block")),
     marks: basic.spec.marks
   });
 
@@ -81,10 +81,7 @@
         "Mod-y": redo,
         "Mod-b": toggleMark(schema.marks.strong),
         "Mod-i": toggleMark(schema.marks.em),
-        "Mod-d": () => {
-          focused = !focused;
-          return true;
-        },
+        "Mod-d": () => (focused = !focused) || true,
         "Backspace": undoInputRule,
         "Enter": splitListItem(schema.nodes.list_item),
         "Mod-]": sinkListItem(schema.nodes.list_item),
@@ -166,7 +163,7 @@
     margin-inline-start: 1.5em;
   }
 
-  .outline :global(pmac-mention) {
+  .outline :global(pmac-tag) {
     color: blue;
     font-weight: bold;
   }

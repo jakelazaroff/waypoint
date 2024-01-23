@@ -23,7 +23,13 @@
   import LocationResults from "./LocationResults.svelte";
   import type { Coordinate } from "~/lib/place";
 
-  let { center, document: _document } = $props<{ center: Coordinate; document: unknown }>();
+  interface Props {
+    center: Coordinate;
+    document: unknown;
+    focus: unknown;
+  }
+
+  let { center, document: _document, focus: _focus } = $props<Props>();
   export function load(doc: any) {
     if (!doc.type) return;
     prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
@@ -96,6 +102,8 @@
       dispatchTransaction(tr) {
         view.updateState(view.state.apply(tr));
         _document = view.state.toJSON().doc;
+
+        _focus = view.state.selection.$head.node(1).toJSON();
       }
     });
     return () => view.destroy();

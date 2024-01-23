@@ -8,6 +8,8 @@
   let center = $state<Coordinate>([0, 0]);
 
   let doc = $state<any>({});
+  let focus = $state<any>(undefined);
+  let focused = $state(true);
   let outline = $state<Outline>();
   onMount(() => {
     const json = localStorage.getItem("travel");
@@ -26,7 +28,7 @@
     return (node?.content || []).flatMap((node: any) => getPlaces(node));
   }
 
-  let places = $derived(getPlaces(doc));
+  let places = $derived(getPlaces((focused && focus) || doc));
 </script>
 
 <div class="wrapper">
@@ -41,7 +43,6 @@
           const file = new Blob([JSON.stringify(doc)], { type: "application/json" });
           a.href = URL.createObjectURL(file);
           a.download = `${filename}.json`;
-          console.log(a);
           a.click();
         }}
       >
@@ -58,8 +59,9 @@
           e.currentTarget.value = "";
         }}
       />
+      <label>focus <input type="checkbox" bind:checked={focused} /></label>
     </div>
-    <Outline {center} bind:this={outline} bind:document={doc} />
+    <Outline {center} bind:this={outline} bind:document={doc} bind:focus />
   </div>
   <Map {places} bind:center />
 </div>

@@ -9,7 +9,7 @@ const config = {
 
   kit: {
     alias: { "~": "src" },
-    adapter: adapter()
+    adapter: adapter({ fallback: "index.html" })
   }
 };
 

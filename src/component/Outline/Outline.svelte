@@ -1,9 +1,9 @@
 <script lang="ts">
   import { schema as basic } from "prosemirror-schema-basic";
-  import { EditorState, type EditorStateConfig } from "prosemirror-state";
+  import { EditorState, Plugin, type EditorStateConfig } from "prosemirror-state";
   import { Node, Schema } from "prosemirror-model";
   import { baseKeymap, toggleMark } from "prosemirror-commands";
-  import { EditorView } from "prosemirror-view";
+  import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
   import { undo, redo, history } from "prosemirror-history";
   import { keymap } from "prosemirror-keymap";
   import { addListNodes, liftListItem, sinkListItem, splitListItem } from "prosemirror-schema-list";
@@ -27,9 +27,10 @@
     center: Coordinate;
     document: unknown;
     focus: unknown;
+    focused: boolean;
   }
 
-  let { center, document: _document, focus: _focus } = $props<Props>();
+  let { center, focused, document: _document, focus: _focus } = $props<Props>();
   export function load(doc: any) {
     if (!doc.type) return;
     prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
@@ -50,6 +51,21 @@
   const config: EditorStateConfig = {
     schema,
     plugins: [
+      new Plugin({
+        props: {
+          decorations(state) {
+            const decorations: Decoration[] = [];
+            state.doc.nodesBetween(state.selection.from, state.selection.to, (node, pos) => {
+              if (!node.isBlock) return;
+
+              const decoration = Decoration.node(pos, pos + node.nodeSize, { class: "focused" });
+              decorations.push(decoration);
+            });
+
+            return DecorationSet.create(state.doc, decorations);
+          }
+        }
+      }),
       autocomplete({
         onInput(text, node) {
           query = text;
@@ -65,6 +81,10 @@
         "Mod-y": redo,
         "Mod-b": toggleMark(schema.marks.strong),
         "Mod-i": toggleMark(schema.marks.em),
+        "Mod-d": () => {
+          focused = !focused;
+          return true;
+        },
         "Backspace": undoInputRule,
         "Enter": splitListItem(schema.nodes.list_item),
         "Mod-]": sinkListItem(schema.nodes.list_item),
@@ -102,7 +122,6 @@
       dispatchTransaction(tr) {
         view.updateState(view.state.apply(tr));
         _document = view.state.toJSON().doc;
-
         _focus = view.state.selection.$head.node(1).toJSON();
       }
     });
@@ -110,7 +129,7 @@
   });
 </script>
 
-<div class="outline" bind:this={el}></div>
+<div class="outline" class:focused bind:this={el}></div>
 {#if query}
   <div class="results" style:left={position.x + "px"} style:top={position.y + "px"}>
     <LocationResults
@@ -136,6 +155,10 @@
 
   .outline :global(.ProseMirror):focus-visible {
     outline: 0;
+  }
+
+  .outline.focused :global(.ProseMirror > :not(.focused)) {
+    opacity: 0.25;
   }
 
   .outline :global(:where(ol, ul)) {

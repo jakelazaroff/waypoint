@@ -23,6 +23,9 @@ dependencies:
   prosemirror-keymap:
     specifier: ^1.2.2
     version: 1.2.2
+  prosemirror-mentions:
+    specifier: ^1.0.2
+    version: 1.0.2(prosemirror-state@1.4.3)(prosemirror-view@1.32.7)
   prosemirror-model:
     specifier: ^1.19.4
     version: 1.19.4
@@ -1158,6 +1161,16 @@ packages:
     dependencies:
       prosemirror-state: 1.4.3
       w3c-keyname: 2.2.8
+    dev: false
+
+  /prosemirror-mentions@1.0.2(prosemirror-state@1.4.3)(prosemirror-view@1.32.7):
+    resolution: {integrity: sha512-d9O1IT69NQvASN4K+/ki5FaiAs5yK5qnueZiRHtlnsy80V74hVINIdDp2HQkFM26/TLZ4xbkjXTakjv4X4ZRiQ==}
+    peerDependencies:
+      prosemirror-state: ^1.2.2
+      prosemirror-view: ^1.4.2
+    dependencies:
+      prosemirror-state: 1.4.3
+      prosemirror-view: 1.32.7
     dev: false
 
   /prosemirror-model@1.19.4:

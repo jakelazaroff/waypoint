@@ -1,29 +1,28 @@
 <script lang="ts">
   import "~/style/style.css";
   import Map from "~/component/Map.svelte";
-  import Search from "~/component/Search.svelte";
-  import Outline from "~/component/Outline.svelte";
-  import type { Place } from "~/lib/place";
+  import Outline from "~/component/Outline/Outline.svelte";
+  import { type BoundingBox, type Place } from "~/lib/place";
 
-  let places = $state<Place[]>([]);
+  let bounds = $state<BoundingBox>([
+    [0, 0],
+    [0, 0]
+  ]);
+
+  let document = $state<unknown>({});
+  function getPlaces(node: any): Place[] {
+    if (node.type === "mention") return node.attrs.data;
+    return (node.content || []).flatMap((node: any) => getPlaces(node));
+  }
+
+  let places = $derived(getPlaces(document));
 </script>
 
 <div class="wrapper">
   <div class="data">
-    <!-- <Search
-      onretrieve={place => {
-        console.log(place);
-        places = [...places, place];
-      }}
-    />
-    <ul>
-      {#each places as place}
-        <li>{place.name}</li>
-      {/each}
-    </ul> -->
-    <Outline />
+    <Outline {bounds} bind:document />
   </div>
-  <Map {places} />
+  <Map {places} bind:bounds />
 </div>
 
 <style>

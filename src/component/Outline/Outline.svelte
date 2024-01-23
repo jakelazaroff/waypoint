@@ -1,7 +1,7 @@
 <script lang="ts">
   import { schema as basic } from "prosemirror-schema-basic";
   import { EditorState } from "prosemirror-state";
-  import { Schema } from "prosemirror-model";
+  import { Node, Schema } from "prosemirror-model";
   import { baseKeymap, toggleMark } from "prosemirror-commands";
   import { EditorView } from "prosemirror-view";
   import { undo, redo, history } from "prosemirror-history";
@@ -13,30 +13,50 @@
     smartQuotes,
     emDash,
     ellipsis,
-    undoInputRule
+    undoInputRule,
+    textblockTypeInputRule
   } from "prosemirror-inputrules";
   import "prosemirror-view/style/prosemirror.css";
 
+  import { autocomplete, select, addMentionNodes } from "~/lib/autocomplete";
+  import "./LocationResults.svelte";
+  import LocationResults from "./LocationResults.svelte";
+  import type { BoundingBox } from "~/lib/place";
+
+  let { bounds, document } = $props<{ bounds: BoundingBox; document: unknown }>();
+
   let el = $state<HTMLElement>();
+  let query = $state("");
+
+  let position = $state({ x: 0, y: 0 });
 
   const schema = new Schema({
-    nodes: addListNodes(basic.spec.nodes, "paragraph block*", "block"),
+    nodes: addMentionNodes(addListNodes(basic.spec.nodes, "paragraph block*", "block")),
     marks: basic.spec.marks
   });
 
   let prose = EditorState.create({
     schema,
     plugins: [
+      autocomplete({
+        onInput(text, node) {
+          query = text;
+
+          if (!node) return;
+          const bounds = node.getBoundingClientRect();
+          position = { x: bounds.left, y: node.offsetHeight + bounds.top };
+        }
+      }),
       history(),
       keymap({
         "Mod-z": undo,
         "Mod-y": redo,
         "Mod-b": toggleMark(schema.marks.strong),
         "Mod-i": toggleMark(schema.marks.em),
-        Backspace: undoInputRule,
-        Enter: splitListItem(schema.nodes.list_item),
+        "Backspace": undoInputRule,
+        "Enter": splitListItem(schema.nodes.list_item),
         "Mod-]": sinkListItem(schema.nodes.list_item),
-        Tab: sinkListItem(schema.nodes.list_item),
+        "Tab": sinkListItem(schema.nodes.list_item),
         "Mod-[": liftListItem(schema.nodes.list_item),
         "Shift+Tab": liftListItem(schema.nodes.list_item)
       }),
@@ -46,6 +66,7 @@
           ...smartQuotes,
           emDash,
           ellipsis,
+          textblockTypeInputRule(/\@/, schema.nodes.place),
           wrappingInputRule(
             /^(\d+)\.\s$/,
             schema.nodes.ordered_list,
@@ -58,19 +79,32 @@
     ]
   });
 
-  let view = new EditorView(null, {
-    state: prose
-  });
+  let view = new EditorView(null, { state: prose });
 
   $effect(() => {
     if (!el) return;
 
-    view = new EditorView(el, { state: prose });
+    view = new EditorView(el, {
+      state: prose,
+      dispatchTransaction(tr) {
+        view.updateState(view.state.apply(tr));
+        document = view.state.toJSON().doc;
+      }
+    });
     return () => view.destroy();
   });
 </script>
 
 <div class="outline" bind:this={el}></div>
+{#if query}
+  <div class="results" style:left={position.x + "px"} style:top={position.y + "px"}>
+    <LocationResults
+      {query}
+      {bounds}
+      onselect={place => select(view, { text: place.name, data: place })}
+    />
+  </div>
+{/if}
 
 <style>
   .outline {
@@ -86,5 +120,15 @@
 
   .outline :global(.ProseMirror):focus-visible {
     outline: 0;
+  }
+
+  .outline :global(pmac-mention) {
+    color: blue;
+    font-weight: bold;
+  }
+
+  .results {
+    position: fixed;
+    z-index: 99999999;
   }
 </style>

@@ -164,7 +164,7 @@
   }
 
   .outline :global(pmac-tag) {
-    color: blue;
+    color: #5c7cfa;
     font-weight: bold;
   }
 

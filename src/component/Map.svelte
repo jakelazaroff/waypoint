@@ -6,36 +6,35 @@
 
   import { PUBLIC_MAPBOX_TOKEN } from "$env/static/public";
 
-  import type { GeoJSON, BoundingBox, Coordinate } from "~/lib/place";
+  import type { Place, Coordinate, GeoJsonFeatureCollection } from "~/lib/place";
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
 
-  let {
-    places,
-    bounds: _bounds,
-    center: _center
-  } = $props<{
-    places: GeoJSON<{ name: string; mapboxId: string }>[];
-    bounds?: BoundingBox;
+  let { places, center: _center } = $props<{
+    places: Place[];
     center?: Coordinate;
   }>();
 
   mapboxgl.accessToken = PUBLIC_MAPBOX_TOKEN;
 
   let el = $state<HTMLElement>();
+  let loaded = $state(false);
   let map: mapboxgl.Map;
 
   function syncPosition() {
     const c = map.getCenter();
     _center = [c.lng, c.lat];
+  }
 
-    const bbox = map.getBounds();
-    const sw = bbox.getSouthWest();
-    const ne = bbox.getNorthEast();
-    _bounds = [
-      [sw.lng, sw.lat],
-      [ne.lng, ne.lat]
-    ];
+  function toGeoJSON(places: Place[]): GeoJsonFeatureCollection {
+    return {
+      type: "FeatureCollection",
+      features: places.map(place => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: place.position },
+        properties: { name: place.name, mapboxId: place.mapboxId }
+      }))
+    };
   }
 
   onMount(() => {
@@ -49,89 +48,66 @@
     });
 
     map.on("load", () => {
-      map.addSource("places", {
-        type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: places
-        }
-      });
+      loaded = true;
+      map.addSource("places", { type: "geojson", data: toGeoJSON(places) });
 
       const pin = new Image();
       pin.src = "/pin.svg";
       pin.onload = () => map.addImage("pin", pin);
 
       map.addLayer({
-        id: "points",
+        id: "text",
         type: "symbol",
         source: "places",
         layout: {
-          "icon-image": "pin",
-          "icon-anchor": "bottom",
-          "icon-allow-overlap": true,
           "text-field": ["get", "name"],
-          "text-font": ["Overpass", "Open Sans Semibold", "Arial Unicode MS Bold"],
+          "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
           "text-size": 12,
           "text-offset": [0, 0.5],
           "text-anchor": "top",
           "text-optional": true
         }
       });
+
+      map.addLayer({
+        id: "markers",
+        type: "symbol",
+        source: "places",
+        layout: { "icon-image": "pin", "icon-anchor": "bottom", "icon-allow-overlap": true }
+      });
+
+      fitBounds(places.map(place => place.position));
     });
 
     map.on("moveend", syncPosition);
-    syncPosition();
   });
 
-  function boundingBox(coords: [longitude: number, latitude: number][]) {
-    const lat = coords.map(([, lat]) => lat);
-    const lon = coords.map(([lon]) => lon);
+  function fitBounds(coords: Coordinate[]) {
+    if (!coords.length) return;
 
-    return {
-      ne: [Math.max(...lon), Math.max(...lat)] as mapboxgl.LngLatLike,
-      sw: [Math.min(...lon), Math.min(...lat)] as mapboxgl.LngLatLike
-    };
-  }
-
-  let placeids = new Set<string>([]);
-  function intersection<T>(set1: Set<T>, set2: Set<T>): Set<T> {
-    const result = new Set<T>();
-
-    const small = set1.size <= set2.size ? set1 : set2;
-    const large = small === set1 ? set2 : set1;
-
-    for (const value of small) {
-      if (large.has(value)) result.add(value);
+    const bounds = new mapboxgl.LngLatBounds();
+    for (const coord of coords) {
+      bounds.extend(new mapboxgl.LngLat(...coord));
     }
 
-    return result;
+    map.fitBounds(bounds, { padding: 200, maxZoom: 12, duration: 1000 });
   }
 
   $effect(() => {
     const source = map.getSource("places") as mapboxgl.GeoJSONSource | undefined;
-    source?.setData({ type: "FeatureCollection", features: places });
+    source?.setData(toGeoJSON(places));
 
-    const ids = new Set(places.map(place => place.properties.mapboxId));
-    if (ids.size !== placeids.size || intersection(placeids, ids).size !== ids.size) {
-      placeids = ids;
-      const { ne, sw } = boundingBox(places.map(place => place.geometry.coordinates));
-      map.fitBounds([ne, sw], { padding: 200, maxZoom: 12, duration: 1000 });
-    }
+    fitBounds(places.map(place => place.position));
   });
 </script>
 
 <div class="wrapper">
   <div class="tools">
-    <Button
-      onclick={() => {
-        const { ne, sw } = boundingBox(places.map(place => place.geometry.coordinates));
-        map.fitBounds([ne, sw], { padding: 100, maxZoom: 12, duration: 1000 });
-      }}
-    >
+    <Button onclick={() => fitBounds(places.map(place => place.position))}>
       <Icon name="pins" />
     </Button>
   </div>
-  <div class="map" bind:this={el}></div>
+  <div class="map" class:loaded bind:this={el}></div>
 </div>
 
 <style>
@@ -139,11 +115,18 @@
     position: relative;
     width: 100%;
     height: 100%;
+    background-color: #354b68;
   }
 
   .map {
     width: 100%;
     height: 100%;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .map.loaded {
+    opacity: 1;
   }
 
   .tools {

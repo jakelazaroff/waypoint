@@ -7,11 +7,18 @@ export interface Place {
 export type Coordinate = [longitude: number, latitude: number];
 export type BoundingBox = [Coordinate, Coordinate];
 
-export interface GeoJSON<Properties> {
+export interface GeoJsonFeatureCollection<P = GeoJsonProperties> {
+  type: "FeatureCollection";
+  features: GeoJsonFeature<P>[];
+}
+
+export type GeoJsonProperties = { [name: string]: any } | null;
+
+export interface GeoJsonFeature<P = GeoJsonProperties> {
   type: "Feature";
   geometry: {
     type: "Point";
     coordinates: Coordinate;
   };
-  properties: Properties;
+  properties: P;
 }

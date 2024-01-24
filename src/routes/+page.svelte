@@ -6,6 +6,7 @@
   import { type Coordinate, type Place } from "~/lib/place";
   import { onMount } from "svelte";
   import Toggle from "~/component/Toggle.svelte";
+  import Button from "~/component/Button.svelte";
 
   let center = $state<Coordinate>([0, 0]);
 
@@ -40,7 +41,7 @@
 <div class="wrapper">
   <div class="data">
     <div class="toolbar">
-      <button
+      <Button
         class="button"
         onclick={() => {
           const filename = prompt("enter a filename");
@@ -55,8 +56,8 @@
       >
         <Icon name="save" />
         <span class="label">Save</span>
-      </button>
-      <button
+      </Button>
+      <Button
         class="button"
         onclick={() => {
           const input = document.createElement("input");
@@ -75,7 +76,7 @@
       >
         <Icon name="open" />
         <span class="label">Open</span>
-      </button>
+      </Button>
       <div class="right">
         <Toggle bind:checked={focused} label="focus">
           <Icon name="focus" />
@@ -109,28 +110,6 @@
     padding: 8px;
     box-shadow: 0 1px 0 #00000011;
     column-gap: 4px;
-  }
-
-  .button {
-    display: grid;
-    grid-auto-flow: column;
-    gap: 6px;
-    align-items: center;
-    border: 0;
-    background-color: transparent;
-    border-radius: 8px;
-    padding: 6px 8px;
-    font-size: 0.75rem;
-    line-height: 1;
-    transition: background-color 0.25s ease;
-  }
-
-  .button:hover {
-    background-color: #00000022;
-  }
-
-  .button:active {
-    background-color: #00000044;
   }
 
   .label {

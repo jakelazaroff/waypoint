@@ -19,7 +19,7 @@
     display: grid;
     appearance: none;
     border: 0;
-    background-color: transparent;
+    background-color: #ffffff;
     padding: 6px;
     border-radius: 8px;
     transition: background-color 0.25s ease;
@@ -27,15 +27,15 @@
 
   button:hover,
   button[aria-pressed="true"] {
-    background-color: #00000022;
+    background-color: #dddddd;
   }
 
   button:active,
   button[aria-pressed="true"]:hover {
-    background-color: #00000044;
+    background-color: #bbbbbb;
   }
 
   button[aria-pressed="true"]:active {
-    background-color: #00000022;
+    background-color: #dddddd;
   }
 </style>

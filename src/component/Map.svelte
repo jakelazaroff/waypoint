@@ -7,6 +7,8 @@
   import { PUBLIC_MAPBOX_TOKEN } from "$env/static/public";
 
   import type { Place, BoundingBox, Coordinate } from "~/lib/place";
+  import Icon from "~/component/Icon.svelte";
+  import Button from "~/component/Button.svelte";
 
   let {
     places,
@@ -87,13 +89,16 @@
 </script>
 
 <div class="wrapper">
-  <button
-    class="reset"
-    onclick={() => {
-      const { ne, sw } = boundingBox(places.map(place => place.position));
-      map.fitBounds([ne, sw], { padding: 100, maxZoom: 12, duration: 1000 });
-    }}>reset view</button
-  >
+  <div class="tools">
+    <Button
+      onclick={() => {
+        const { ne, sw } = boundingBox(places.map(place => place.position));
+        map.fitBounds([ne, sw], { padding: 100, maxZoom: 12, duration: 1000 });
+      }}
+    >
+      <Icon name="pins" />
+    </Button>
+  </div>
   <div class="map" bind:this={el}></div>
 </div>
 
@@ -109,8 +114,10 @@
     height: 100%;
   }
 
-  .reset {
+  .tools {
     position: absolute;
+    top: 8px;
+    right: 8px;
     z-index: 1;
   }
 </style>

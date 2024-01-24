@@ -31,10 +31,13 @@
 
   let { focused, document: _document, focus: _focus } = $props<Props>();
   export function load(doc: any) {
-    if (!doc.type) return;
-    prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
-    view.updateState(prose);
-    _document = view.state.toJSON().doc;
+    try {
+      prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
+      view.updateState(prose);
+      _document = view.state.toJSON().doc;
+    } catch (e) {
+      console.error(`Error loading document`, e);
+    }
   }
 
   let el = $state<HTMLElement>();
@@ -50,6 +53,25 @@
   const config: EditorStateConfig = {
     schema,
     plugins: [
+      // allow command clicking on links to open in a new tab
+      new Plugin({
+        props: {
+          handleClick(view, pos, evt) {
+            if (!evt.metaKey) return;
+
+            const el = view.domAtPos(pos).node.parentElement;
+            if (el?.tagName !== "A" || !el.getAttribute("href")) return;
+
+            const a = document.createElement("a");
+            a.href = el.getAttribute("href") || "";
+            a.target = "_blank";
+            a.click();
+
+            return true;
+          }
+        }
+      }),
+      // annotate currently selected nodes and their ancestors with a "focused" class
       new Plugin({
         props: {
           decorations(state) {
@@ -117,7 +139,9 @@
       dispatchTransaction(tr) {
         view.updateState(view.state.apply(tr));
         _document = view.state.toJSON().doc;
-        _focus = view.state.selection.$head.node(1).toJSON();
+
+        const selected = view.state.selection.$head.node(1);
+        if (selected) _focus = selected.toJSON();
       }
     });
 

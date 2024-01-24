@@ -3,7 +3,7 @@
   import Map from "~/component/Map.svelte";
   import Outline from "~/component/Outline/Outline.svelte";
   import Icon from "~/component/Icon.svelte";
-  import { type Coordinate, type Place } from "~/lib/place";
+  import { type Coordinate, type GeoJSON } from "~/lib/place";
   import { onMount } from "svelte";
   import Toggle from "~/component/Toggle.svelte";
   import Button from "~/component/Button.svelte";
@@ -26,8 +26,15 @@
     localStorage.setItem("travel", JSON.stringify(doc));
   });
 
-  function getPlaces(node: any): Place[] {
-    if (node?.type === "tag") return node.attrs.data;
+  function getPlaces(node: any): GeoJSON<{ name: string; mapboxId: string }>[] {
+    if (node?.type === "tag")
+      return [
+        {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: node.attrs.data.position },
+          properties: { name: node.attrs.text, mapboxId: node.attrs.data.mapboxId }
+        }
+      ];
     return (node?.content || []).flatMap((node: any) => getPlaces(node));
   }
 
@@ -42,7 +49,6 @@
   <div class="data">
     <div class="toolbar">
       <Button
-        class="button"
         onclick={() => {
           const filename = prompt("enter a filename");
           if (!filename) return;
@@ -58,7 +64,6 @@
         <span class="label">Save</span>
       </Button>
       <Button
-        class="button"
         onclick={() => {
           const input = document.createElement("input");
           input.type = "file";

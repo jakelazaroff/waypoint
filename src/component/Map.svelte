@@ -6,7 +6,7 @@
 
   import { PUBLIC_MAPBOX_TOKEN } from "$env/static/public";
 
-  import type { Place, BoundingBox, Coordinate } from "~/lib/place";
+  import type { GeoJSON, BoundingBox, Coordinate } from "~/lib/place";
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
 
@@ -14,7 +14,11 @@
     places,
     bounds: _bounds,
     center: _center
-  } = $props<{ places: Place[]; bounds?: BoundingBox; center?: Coordinate }>();
+  } = $props<{
+    places: GeoJSON<{ name: string; mapboxId: string }>[];
+    bounds?: BoundingBox;
+    center?: Coordinate;
+  }>();
 
   mapboxgl.accessToken = PUBLIC_MAPBOX_TOKEN;
 
@@ -42,6 +46,29 @@
       style: "mapbox://styles/mapbox/streets-v12",
       center: [-74.5, 40],
       zoom: 7
+    });
+
+    map.on("load", () => {
+      map.addSource("places", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: places
+        }
+      });
+
+      map.addLayer({
+        id: "points",
+        type: "symbol",
+        source: "places",
+        layout: {
+          "text-field": ["get", "name"],
+          // "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+          "text-size": 12,
+          "text-offset": [0, 0.5],
+          "text-anchor": "top"
+        }
+      });
     });
 
     map.on("moveend", syncPosition);
@@ -73,15 +100,18 @@
   }
 
   $effect(() => {
-    if (!places.length) return;
+    const source = map.getSource("places") as mapboxgl.GeoJSONSource | undefined;
+    source?.setData({ type: "FeatureCollection", features: places });
 
-    const markers = places.map(place => new mapboxgl.Marker().setLngLat(place.position).addTo(map));
+    const markers = places.map(place =>
+      new mapboxgl.Marker().setLngLat(place.geometry.coordinates).addTo(map)
+    );
 
-    const ids = new Set(places.map(place => place.mapboxId));
+    const ids = new Set(places.map(place => place.properties.mapboxId));
     if (ids.size !== placeids.size || intersection(placeids, ids).size !== ids.size) {
       placeids = ids;
-      const { ne, sw } = boundingBox(places.map(place => place.position));
-      map.fitBounds([ne, sw], { padding: 100, maxZoom: 12, duration: 1000 });
+      const { ne, sw } = boundingBox(places.map(place => place.geometry.coordinates));
+      map.fitBounds([ne, sw], { padding: 200, maxZoom: 12, duration: 1000 });
     }
 
     return () => markers.forEach(marker => marker.remove());
@@ -92,7 +122,7 @@
   <div class="tools">
     <Button
       onclick={() => {
-        const { ne, sw } = boundingBox(places.map(place => place.position));
+        const { ne, sw } = boundingBox(places.map(place => place.geometry.coordinates));
         map.fitBounds([ne, sw], { padding: 100, maxZoom: 12, duration: 1000 });
       }}
     >

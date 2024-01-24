@@ -9,22 +9,13 @@
   import type { Place, Coordinate, GeoJsonFeatureCollection } from "~/lib/place";
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
+  import { center } from "~/store/map.svelte";
 
-  let { places, center: _center } = $props<{
-    places: Place[];
-    center?: Coordinate;
-  }>();
-
-  mapboxgl.accessToken = PUBLIC_MAPBOX_TOKEN;
+  let { places } = $props<{ places: Place[] }>();
 
   let el = $state<HTMLElement>();
   let loaded = $state(false);
   let map: mapboxgl.Map;
-
-  function syncPosition() {
-    const c = map.getCenter();
-    _center = [c.lng, c.lat];
-  }
 
   function toGeoJSON(places: Place[]): GeoJsonFeatureCollection {
     return {
@@ -41,6 +32,7 @@
     if (!el) return;
 
     map = new mapboxgl.Map({
+      accessToken: PUBLIC_MAPBOX_TOKEN,
       container: el,
       style: "mapbox://styles/mapbox/streets-v12",
       center: [-74.5, 40],
@@ -79,7 +71,7 @@
       fitBounds(places.map(place => place.position));
     });
 
-    map.on("moveend", syncPosition);
+    map.on("moveend", () => center.set([map.getCenter().lng, map.getCenter().lat]));
   });
 
   function fitBounds(coords: Coordinate[]) {

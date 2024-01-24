@@ -22,15 +22,15 @@
   import "./LocationResults.svelte";
   import LocationResults from "./LocationResults.svelte";
   import type { Coordinate } from "~/lib/place";
+  import { center } from "~/store/map.svelte";
 
   interface Props {
-    center: Coordinate;
     document: unknown;
     focus: unknown;
     focused: boolean;
   }
 
-  let { center, focused, document: _document, focus: _focus } = $props<Props>();
+  let { focused, document: _document, focus: _focus } = $props<Props>();
   export function load(doc: any) {
     if (!doc.type) return;
     prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
@@ -131,7 +131,7 @@
   <div class="results" style:left={position.x + "px"} style:top={position.y + "px"}>
     <LocationResults
       {query}
-      {center}
+      center={$center}
       onselect={place => select(view, { text: place.name, data: place })}
     />
   </div>

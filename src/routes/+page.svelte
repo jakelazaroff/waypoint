@@ -3,12 +3,10 @@
   import Map from "~/component/Map.svelte";
   import Outline from "~/component/Outline/Outline.svelte";
   import Icon from "~/component/Icon.svelte";
-  import { type Coordinate, type Place } from "~/lib/place";
+  import { type Place } from "~/lib/place";
   import { onMount } from "svelte";
   import Toggle from "~/component/Toggle.svelte";
   import Button from "~/component/Button.svelte";
-
-  let center = $state<Coordinate>([0, 0]);
 
   let doc = $state<any>({});
   let focus = $state<any>(undefined);
@@ -81,9 +79,9 @@
         </Toggle>
       </div>
     </div>
-    <Outline {center} bind:this={outline} bind:document={doc} bind:focus bind:focused />
+    <Outline bind:this={outline} bind:document={doc} bind:focus bind:focused />
   </div>
-  <Map {places} bind:center />
+  <Map {places} />
 </div>
 
 <style>

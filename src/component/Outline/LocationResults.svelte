@@ -30,14 +30,10 @@
         class="result"
         onclick={async () => {
           const result = await search.retrieve(suggestion, { sessionToken });
-          const [feature] = result.features;
+          const [{ properties }] = result.features;
           onselect({
-            name: feature.properties.name_preferred || feature.properties.name,
-            mapboxId: feature.properties.mapbox_id,
-            position: [
-              feature.properties.coordinates.longitude,
-              feature.properties.coordinates.latitude
-            ]
+            name: properties.name_preferred || properties.name,
+            position: [properties.coordinates.longitude, properties.coordinates.latitude]
           });
         }}
       >

@@ -6,7 +6,7 @@
 
   import { PUBLIC_MAPBOX_TOKEN } from "$env/static/public";
 
-  import type { Place, Coordinate, GeoJsonFeatureCollection } from "~/lib/place";
+  import { toGeoJson, type Place, type Coordinate } from "~/lib/place";
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
   import { center } from "~/store/map.svelte";
@@ -16,17 +16,6 @@
   let el = $state<HTMLElement>();
   let loaded = $state(false);
   let map: mapboxgl.Map;
-
-  function toGeoJSON(places: Place[]): GeoJsonFeatureCollection {
-    return {
-      type: "FeatureCollection",
-      features: places.map(place => ({
-        type: "Feature",
-        geometry: { type: "Point", coordinates: place.position },
-        properties: { name: place.name, mapboxId: place.mapboxId }
-      }))
-    };
-  }
 
   onMount(() => {
     if (!el) return;
@@ -41,10 +30,11 @@
 
     map.on("load", () => {
       loaded = true;
-      map.addSource("places", { type: "geojson", data: toGeoJSON(places) });
+      map.addSource("places", { type: "geojson", data: toGeoJson(places) });
 
       const pin = new Image();
       pin.src = "/pin.svg";
+      pin.width = pin.height = 64;
       pin.onload = () => map.addImage("pin", pin);
 
       map.addLayer({
@@ -58,6 +48,10 @@
           "text-offset": [0, 0.5],
           "text-anchor": "top",
           "text-optional": true
+        },
+        paint: {
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2
         }
       });
 
@@ -65,7 +59,12 @@
         id: "markers",
         type: "symbol",
         source: "places",
-        layout: { "icon-image": "pin", "icon-anchor": "bottom", "icon-allow-overlap": true }
+        layout: {
+          "icon-image": "pin",
+          "icon-size": 0.5,
+          "icon-anchor": "bottom",
+          "icon-allow-overlap": true
+        }
       });
 
       fitBounds(places.map(place => place.position));
@@ -86,9 +85,11 @@
   }
 
   $effect(() => {
+    // update the data source
     const source = map.getSource("places") as mapboxgl.GeoJSONSource | undefined;
-    source?.setData(toGeoJSON(places));
+    source?.setData(toGeoJson(places));
 
+    // fit the map to the current set of bounds
     fitBounds(places.map(place => place.position));
   });
 </script>

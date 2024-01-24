@@ -21,7 +21,6 @@
   import { autocomplete, select, addTagNodes } from "~/lib/autocomplete";
   import "./LocationResults.svelte";
   import LocationResults from "./LocationResults.svelte";
-  import type { Coordinate } from "~/lib/place";
   import { center } from "~/store/map.svelte";
 
   interface Props {
@@ -113,7 +112,6 @@
 
   $effect(() => {
     if (!el) return;
-
     view = new EditorView(el, {
       state: prose,
       dispatchTransaction(tr) {
@@ -122,6 +120,7 @@
         _focus = view.state.selection.$head.node(1).toJSON();
       }
     });
+
     return () => view.destroy();
   });
 </script>

@@ -1,10 +1,17 @@
-import type { Node, NodeSpec, ResolvedPos, Schema } from "prosemirror-model";
+import type {
+  DOMOutputSpec,
+  Node,
+  NodeSpec,
+  ParseRule,
+  ResolvedPos,
+  Schema
+} from "prosemirror-model";
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
 
 const regexp = (char: string) => new RegExp(`(^|\\s)${char}([\\w-\\+]+\\s?[\\w-\\+]*)$`);
 
-export function getMatch($position: ResolvedPos) {
+function getMatch($position: ResolvedPos) {
   const text = $position.doc.textBetween($position.before(), $position.pos, "\n", "\0");
 
   const match = text.match(regexp("@"));
@@ -40,19 +47,48 @@ function defaultState(): State {
 
 interface AutocompleteOptions {
   tag?: string;
+  nodeName?: string;
+  toDOM?(node: Node): DOMOutputSpec;
+  parseDOM?: ParseRule;
   onInput?(query: string, node?: HTMLElement): void;
 }
 
-export type InputEvent = CustomEvent<{ query: string }>;
-export type SelectEvent = CustomEvent<{ text: string; data: unknown }>;
+export default function (options: AutocompleteOptions) {
+  const key = new PluginKey<State>();
 
-const key = new PluginKey<State>();
-
-export function autocomplete(options: AutocompleteOptions) {
+  const tag = options.tag ?? "pmac-tag";
   const opts = {
-    tag: "pmac-tag",
+    tag,
+    nodeName: "tag",
+    toDOM: (node: Node): DOMOutputSpec => [opts.tag, node.attrs.data, "@" + node.attrs.text],
+    parseDOM: [
+      {
+        tag,
+        getAttrs(dom: string | HTMLElement) {
+          if (typeof dom === "string") return {};
+
+          const data: { [key: string]: string } = {};
+          for (const attribute of dom.attributes) {
+            data[attribute.name] = attribute.value;
+          }
+
+          return { text: dom.innerText.replace(/^@/, ""), data };
+        }
+      }
+    ] as ParseRule,
     onInput: () => {},
     ...options
+  };
+
+  const node: NodeSpec = {
+    group: "inline",
+    inline: true,
+    atom: true,
+    selectable: false,
+    draggable: false,
+    attrs: { text: {}, data: {} },
+    toDOM: opts.toDOM,
+    parseDOM: [opts.parseDOM]
   };
 
   const plugin = new Plugin<State>({
@@ -121,44 +157,22 @@ export function autocomplete(options: AutocompleteOptions) {
     }
   });
 
-  return plugin;
+  function addNodes(nodes: Schema["spec"]["nodes"]) {
+    return nodes.append({ [opts.nodeName]: node });
+  }
+
+  function select(view: EditorView, attrs: { text: string; data: unknown }) {
+    const state = key.getState(view.state);
+    if (!state) return console.warn("No state found for autocomplete plugin");
+
+    const node = view.state.schema.nodes[opts.nodeName].create(attrs);
+    const tr = view.state.tr.replaceWith(state.range.from, state.range.to, node);
+
+    view.dispatch(tr);
+  }
+
+  return { plugin, addNodes, select };
 }
 
-const tag: NodeSpec = {
-  group: "inline",
-  inline: true,
-  atom: true,
-  selectable: false,
-  draggable: false,
-  attrs: { text: {}, data: {} },
-  toDOM: (node: Node) => ["pmac-tag", node.attrs.data, "@" + node.attrs.text],
-  parseDOM: [
-    {
-      tag: "pmac-tag",
-      getAttrs: dom => {
-        if (typeof dom === "string") return {};
-
-        const data: { [key: string]: string } = {};
-        for (const attribute of dom.attributes) {
-          data[attribute.name] = attribute.value;
-        }
-
-        return { text: dom.innerText.replace(/^@/, ""), data };
-      }
-    }
-  ]
-};
-
-export function addTagNodes(nodes: Schema["spec"]["nodes"]) {
-  return nodes.append({ tag });
-}
-
-export function select(view: EditorView, attrs: { text: string; data: unknown }) {
-  const state = key.getState(view.state);
-  if (!state) return console.warn("No state found for autocomplete plugin");
-
-  const node = view.state.schema.nodes["tag"].create(attrs);
-  const tr = view.state.tr.replaceWith(state.range.from, state.range.to, node);
-
-  view.dispatch(tr);
-}
+export type InputEvent = CustomEvent<{ query: string }>;
+export type SelectEvent = CustomEvent<{ text: string; data: unknown }>;

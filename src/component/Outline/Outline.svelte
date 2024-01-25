@@ -18,7 +18,7 @@
   } from "prosemirror-inputrules";
   import "prosemirror-view/style/prosemirror.css";
 
-  import { autocomplete, select, addTagNodes } from "~/lib/autocomplete";
+  import autocomplete from "~/lib/autocomplete";
   import "./LocationResults.svelte";
   import LocationResults from "./LocationResults.svelte";
   import { center } from "~/store/map.svelte";
@@ -45,8 +45,45 @@
 
   let position = $state({ x: 0, y: 0 });
 
+  const autocompleteTag = "pmac-tag";
+  const {
+    select,
+    addNodes: addAutoCompleteNodes,
+    plugin: autocompletePlugin
+  } = autocomplete({
+    onInput(text, node) {
+      query = text;
+
+      if (!node) return;
+      const bounds = node.getBoundingClientRect();
+      position = { x: bounds.left, y: node.offsetHeight + bounds.top };
+    },
+    toDOM: (node: Node) => [
+      autocompleteTag,
+      {
+        name: node.attrs.name,
+        longitude: node.attrs.data.position[0],
+        latitude: node.attrs.data.position[1]
+      },
+      "@" + node.attrs.text
+    ],
+    parseDOM: {
+      tag: autocompleteTag,
+      getAttrs(dom) {
+        if (typeof dom === "string") return {};
+
+        const lng = Number(dom.getAttribute("longitude")),
+          lat = Number(dom.getAttribute("latitude"));
+        const name = dom.innerText.replace(/^@/, "");
+        const data = { name, position: [lng, lat] };
+
+        return { text: name, data };
+      }
+    }
+  });
+
   const schema = new Schema({
-    nodes: addTagNodes(addListNodes(basic.spec.nodes, "paragraph block*", "block")),
+    nodes: addAutoCompleteNodes(addListNodes(basic.spec.nodes, "paragraph block*", "block")),
     marks: basic.spec.marks
   });
 
@@ -87,15 +124,7 @@
           }
         }
       }),
-      autocomplete({
-        onInput(text, node) {
-          query = text;
-
-          if (!node) return;
-          const bounds = node.getBoundingClientRect();
-          position = { x: bounds.left, y: node.offsetHeight + bounds.top };
-        }
-      }),
+      autocompletePlugin,
       history(),
       keymap({
         "Mod-z": undo,

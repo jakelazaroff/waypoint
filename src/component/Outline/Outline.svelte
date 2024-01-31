@@ -1,9 +1,9 @@
 <script lang="ts">
   import { schema as basic } from "prosemirror-schema-basic";
-  import { EditorState, Plugin, type EditorStateConfig } from "prosemirror-state";
+  import { EditorState, type EditorStateConfig } from "prosemirror-state";
   import { Node, Schema } from "prosemirror-model";
   import { baseKeymap, toggleMark } from "prosemirror-commands";
-  import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
+  import { EditorView } from "prosemirror-view";
   import { undo, redo, history } from "prosemirror-history";
   import { keymap } from "prosemirror-keymap";
   import { addListNodes, liftListItem, sinkListItem, splitListItem } from "prosemirror-schema-list";
@@ -19,6 +19,8 @@
   import "prosemirror-view/style/prosemirror.css";
 
   import autocomplete from "~/lib/autocomplete";
+  import focus from "~/lib/focus";
+  import linkify from "~/lib/linkify";
   import "./LocationResults.svelte";
   import LocationResults from "./LocationResults.svelte";
   import { center } from "~/store/map.svelte";
@@ -90,40 +92,8 @@
   const config: EditorStateConfig = {
     schema,
     plugins: [
-      // allow command clicking on links to open in a new tab
-      new Plugin({
-        props: {
-          handleClick(view, pos, evt) {
-            if (!evt.metaKey) return;
-
-            const el = view.domAtPos(pos).node.parentElement;
-            if (el?.tagName !== "A" || !el.getAttribute("href")) return;
-
-            const a = document.createElement("a");
-            a.href = el.getAttribute("href") || "";
-            a.target = "_blank";
-            a.click();
-
-            return true;
-          }
-        }
-      }),
-      // annotate currently selected nodes and their ancestors with a "focused" class
-      new Plugin({
-        props: {
-          decorations(state) {
-            const decorations: Decoration[] = [];
-            state.doc.nodesBetween(state.selection.from, state.selection.to, (node, pos) => {
-              if (!node.isBlock) return;
-
-              const decoration = Decoration.node(pos, pos + node.nodeSize, { class: "focused" });
-              decorations.push(decoration);
-            });
-
-            return DecorationSet.create(state.doc, decorations);
-          }
-        }
-      }),
+      linkify(),
+      focus(),
       autocompletePlugin,
       history(),
       keymap({

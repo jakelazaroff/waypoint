@@ -9,9 +9,14 @@ export interface FeatureCollection<P = Properties> {
 
 export interface Feature<P = Properties> {
   type: "Feature";
-  geometry: {
-    type: "Point";
-    coordinates: Coordinate;
-  };
+  geometry:
+    | {
+        type: "Point";
+        coordinates: Coordinate;
+      }
+    | {
+        type: "LineString";
+        coordinates: Coordinate[];
+      };
   properties: P;
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { schema as basic } from "prosemirror-schema-basic";
   import { EditorState, type EditorStateConfig } from "prosemirror-state";
-  import { Node, Schema } from "prosemirror-model";
+  import { Node, type NodeSpec, Schema } from "prosemirror-model";
   import { baseKeymap, toggleMark } from "prosemirror-commands";
   import { EditorView } from "prosemirror-view";
   import { undo, redo, history } from "prosemirror-history";
@@ -84,10 +84,30 @@
     }
   });
 
-  const schema = new Schema({
-    nodes: addAutoCompleteNodes(addListNodes(basic.spec.nodes, "paragraph block*", "block")),
-    marks: basic.spec.marks
-  });
+  const route: NodeSpec = {
+    content: "list_item+",
+    group: "block",
+    parseDOM: [
+      {
+        tag: "ol",
+        getAttrs(dom) {
+          if (typeof dom === "string") return false;
+          if (!("route" in dom.dataset)) return false;
+
+          return {};
+        }
+      }
+    ],
+    toDOM(node) {
+      return ["ol", { "data-route": "" }, 0];
+    }
+  };
+
+  const nodes = addAutoCompleteNodes(
+    addListNodes(basic.spec.nodes.append({ route }), "paragraph block*", "block")
+  );
+
+  const schema = new Schema({ nodes, marks: basic.spec.marks });
 
   const config: EditorStateConfig = {
     schema,
@@ -122,7 +142,8 @@
             match => ({ order: +match[1] }),
             (match, node) => node.childCount + node.attrs.order == +match[1]
           ),
-          wrappingInputRule(/^\s*([-+*])\s$/, schema.nodes.bullet_list)
+          wrappingInputRule(/^\s*([-+*])\s$/, schema.nodes.bullet_list),
+          wrappingInputRule(/^\s*(~)\s$/, schema.nodes.route)
         ]
       })
     ]

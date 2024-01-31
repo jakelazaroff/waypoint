@@ -6,12 +6,18 @@
 
   import { PUBLIC_MAPBOX_TOKEN } from "$env/static/public";
 
-  import { toGeoJson, type Place, type Coordinate } from "~/lib/place";
+  import {
+    toGeoJsonPoints,
+    toGeoJsonLines,
+    type Place,
+    type Route,
+    type Coordinate
+  } from "~/lib/place";
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
   import { center } from "~/store/map.svelte";
 
-  let { places } = $props<{ places: Place[] }>();
+  let { places: data } = $props<{ places: Array<Place | Route> }>();
 
   let el = $state<HTMLElement>();
   let loaded = $state(false);
@@ -30,7 +36,8 @@
 
     map.on("load", () => {
       loaded = true;
-      map.addSource("places", { type: "geojson", data: toGeoJson(places) });
+      map.addSource("places", { type: "geojson", data: toGeoJsonPoints(data) });
+      map.addSource("routes", { type: "geojson", data: toGeoJsonLines(data) });
 
       const pin = new Image();
       pin.src = "/pin.svg";
@@ -56,6 +63,20 @@
       });
 
       map.addLayer({
+        id: "lines",
+        type: "line",
+        source: "routes",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round"
+        },
+        paint: {
+          "line-color": "#5c7cfa",
+          "line-width": 4
+        }
+      });
+
+      map.addLayer({
         id: "markers",
         type: "symbol",
         source: "places",
@@ -67,7 +88,7 @@
         }
       });
 
-      fitBounds(places.map(place => place.position));
+      fitBounds(data.flat().map(place => place.position));
     });
 
     map.on("moveend", () => center.set([map.getCenter().lng, map.getCenter().lat]));
@@ -85,18 +106,21 @@
   }
 
   $effect(() => {
-    // update the data source
-    const source = map.getSource("places") as mapboxgl.GeoJSONSource | undefined;
-    source?.setData(toGeoJson(places));
+    // update the data sources
+    const places = map.getSource("places") as mapboxgl.GeoJSONSource | undefined;
+    places?.setData(toGeoJsonPoints(data));
+
+    const routes = map.getSource("routes") as mapboxgl.GeoJSONSource | undefined;
+    routes?.setData(toGeoJsonLines(data));
 
     // fit the map to the current set of bounds
-    fitBounds(places.map(place => place.position));
+    fitBounds(data.flat().map(place => place.position));
   });
 </script>
 
 <div class="wrapper">
   <div class="tools">
-    <Button onclick={() => fitBounds(places.map(place => place.position))}>
+    <Button onclick={() => fitBounds(data.flat().map(place => place.position))}>
       <Icon name="pins" />
     </Button>
   </div>

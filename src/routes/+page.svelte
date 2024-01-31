@@ -3,7 +3,7 @@
   import Map from "~/component/Map.svelte";
   import Outline from "~/component/Outline/Outline.svelte";
   import Icon from "~/component/Icon.svelte";
-  import { type Place } from "~/lib/place";
+  import { type Place, type Route } from "~/lib/place";
   import { onMount } from "svelte";
   import Toggle from "~/component/Toggle.svelte";
   import Button from "~/component/Button.svelte";
@@ -24,9 +24,12 @@
     localStorage.setItem("travel", JSON.stringify(doc));
   });
 
-  function getPlaces(node: any): Place[] {
+  function getPlaces(node: any): Array<Route | Place> {
     if (node?.type === "tag") return [node.attrs.data];
-    return (node?.content || []).flatMap((node: any) => getPlaces(node));
+    const content = (node?.content || []).flatMap((node: any) => getPlaces(node));
+
+    if (node?.type === "route") return [content];
+    return content;
   }
 
   let places = $derived(getPlaces((focused && focus) || doc));

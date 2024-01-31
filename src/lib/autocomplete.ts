@@ -65,7 +65,7 @@ export default function (options: AutocompleteOptions) {
       {
         tag,
         getAttrs(dom: string | HTMLElement) {
-          if (typeof dom === "string") return {};
+          if (typeof dom === "string") return false;
 
           const data: { [key: string]: string } = {};
           for (const attribute of dom.attributes) {

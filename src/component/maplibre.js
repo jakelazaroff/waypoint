@@ -214,7 +214,7 @@ export class MapLibreOptions extends JSONElement {
   diff = true;
   static get schema() {
     return {
-      "style": Optional(String),
+      "style-url": Optional(String),
       "attribution-control": Optional(Boolean),
       "center": MapLibrePosition,
       "bounds": MapLibreBounds,
@@ -224,10 +224,15 @@ export class MapLibreOptions extends JSONElement {
 
   /** @type {maplibre.MapOptions} */
   get json() {
-    const { "attribution-control": attributionControl, ...options } = super.json;
+    const {
+      "attribution-control": attributionControl,
+      "style-url": style = "https://demotiles.maplibre.org/style.json",
+      ...options
+    } = super.json;
+
     return {
-      style: "https://demotiles.maplibre.org/style.json",
       attributionControl,
+      style,
       ...options
     };
   }

@@ -13,10 +13,14 @@
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
   // import { center } from "~/store/map.svelte";
+  // import { PUBLIC_STADIA_MAPS_API_KEY } from "$env/static/public";
 
   let { places: data } = $props<{ places: Array<Place | Route> }>();
   let map = $state<MapLibre>();
   let bounds = $state<MapLibreBounds>();
+
+  // const style =
+  //   "https://tiles.stadiamaps.com/styles/outdoors.json?api_key=" + PUBLIC_STADIA_MAPS_API_KEY;
 </script>
 
 <div class="wrapper">
@@ -36,7 +40,7 @@
       <maplibre-options
         slot="options"
         attribution-control
-        style="https://tiles.stadiamaps.com/styles/outdoors.json"
+        style-url="https://tiles.stadiamaps.com/styles/outdoors.json"
         zoom={7}
       >
         {#if data.flat().length}

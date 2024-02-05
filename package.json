@@ -27,6 +27,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@stadiamaps/api": "^1.0.10",
 		"@sveltejs/adapter-auto": "^3.1.1",
 		"maplibre-gl": "^4.0.0",
 		"prosemirror-commands": "^1.5.2",

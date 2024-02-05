@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { GeocodingApi, type PeliasGeoJSONFeature } from "@stadiamaps/api";
   import type { Coordinate, Place } from "~/lib/place";
 
   interface Props {
@@ -16,23 +17,14 @@
 
   const { query, center, onselect } = $props<Props>();
 
-  let suggestions = $state<Suggestion[]>([]);
+  const api = new GeocodingApi();
+  let suggestions = $state<PeliasGeoJSONFeature[]>([]);
+  $inspect(suggestions);
 
-  let controller: AbortController | undefined;
   $effect(() => {
-    if (query.length <= 2) return;
-
-    if (controller) controller.abort();
-    controller = new AbortController();
-    fetch(`/nominatim/search?q=${query}&format=jsonv2`, { signal: controller.signal })
-      .then(res => {
-        controller = undefined;
-        return res.json();
-      })
-      .then(res => {
-        suggestions = res;
-      })
-      .catch(() => console.log("aborted query " + query));
+    api.autocomplete({ text: query }).then(res => {
+      suggestions = res.features;
+    });
   });
 </script>
 
@@ -43,13 +35,13 @@
         class="result"
         onclick={async () => {
           onselect({
-            name: suggestion.name,
-            position: [Number(suggestion.lon), Number(suggestion.lat)]
+            name: suggestion.properties?.name || "",
+            position: suggestion.geometry.coordinates as [number, number]
           });
         }}
       >
-        <span class="name">{suggestion.name}</span>
-        <span class="blurb">{suggestion.display_name}</span>
+        <span class="name">{suggestion.properties?.name}</span>
+        <span class="blurb">{suggestion.properties?.label}</span>
       </button>
     </li>
   {/each}

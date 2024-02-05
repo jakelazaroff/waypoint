@@ -1,130 +1,134 @@
 <script lang="ts">
-  import "mapbox-gl/dist/mapbox-gl.css";
-
-  import mapboxgl from "mapbox-gl";
   import { onMount } from "svelte";
+  import "./geojson.js";
+  import { register, type MapLibre, type MapLibreBounds } from "./maplibre.js";
 
-  import { PUBLIC_MAPBOX_TOKEN } from "$env/static/public";
+  let ready = $state(false);
+  onMount(async () => {
+    await register();
+    ready = true;
+  });
 
-  import {
-    toGeoJsonPoints,
-    toGeoJsonLines,
-    type Place,
-    type Route,
-    type Coordinate
-  } from "~/lib/place";
+  import { type Place, type Route } from "~/lib/place";
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
-  import { center } from "~/store/map.svelte";
+  // import { center } from "~/store/map.svelte";
 
   let { places: data } = $props<{ places: Array<Place | Route> }>();
-
-  let el = $state<HTMLElement>();
-  let loaded = $state(false);
-  let map: mapboxgl.Map;
-
-  onMount(() => {
-    if (!el) return;
-
-    map = new mapboxgl.Map({
-      accessToken: PUBLIC_MAPBOX_TOKEN,
-      container: el,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [-74.5, 40],
-      zoom: 7
-    });
-
-    map.on("load", () => {
-      loaded = true;
-      map.addSource("places", { type: "geojson", data: toGeoJsonPoints(data) });
-      map.addSource("routes", { type: "geojson", data: toGeoJsonLines(data) });
-
-      const pin = new Image();
-      pin.src = "/pin.svg";
-      pin.width = pin.height = 64;
-      pin.onload = () => map.addImage("pin", pin);
-
-      map.addLayer({
-        id: "text",
-        type: "symbol",
-        source: "places",
-        layout: {
-          "text-field": ["get", "name"],
-          "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
-          "text-size": 12,
-          "text-offset": [0, 0.5],
-          "text-anchor": "top",
-          "text-optional": true
-        },
-        paint: {
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 2
-        }
-      });
-
-      map.addLayer({
-        id: "lines",
-        type: "line",
-        source: "routes",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round"
-        },
-        paint: {
-          "line-color": "#5c7cfa",
-          "line-width": 4
-        }
-      });
-
-      map.addLayer({
-        id: "markers",
-        type: "symbol",
-        source: "places",
-        layout: {
-          "icon-image": "pin",
-          "icon-size": 0.5,
-          "icon-anchor": "bottom",
-          "icon-allow-overlap": true
-        }
-      });
-
-      fitBounds(data.flat().map(place => place.position));
-    });
-
-    map.on("moveend", () => center.set([map.getCenter().lng, map.getCenter().lat]));
-  });
-
-  function fitBounds(coords: Coordinate[]) {
-    if (!coords.length) return;
-
-    const bounds = new mapboxgl.LngLatBounds();
-    for (const coord of coords) {
-      bounds.extend(new mapboxgl.LngLat(...coord));
-    }
-
-    map.fitBounds(bounds, { padding: 200, maxZoom: 12, duration: 1000 });
-  }
-
-  $effect(() => {
-    // update the data sources
-    const places = map.getSource("places") as mapboxgl.GeoJSONSource | undefined;
-    places?.setData(toGeoJsonPoints(data));
-
-    const routes = map.getSource("routes") as mapboxgl.GeoJSONSource | undefined;
-    routes?.setData(toGeoJsonLines(data));
-
-    // fit the map to the current set of bounds
-    fitBounds(data.flat().map(place => place.position));
-  });
+  let map = $state<MapLibre>();
+  let bounds = $state<MapLibreBounds>();
 </script>
 
 <div class="wrapper">
   <div class="tools">
-    <Button onclick={() => fitBounds(data.flat().map(place => place.position))}>
+    <Button
+      onclick={() => {
+        if (!bounds) return;
+        map?.map.fitBounds(bounds.json);
+      }}
+    >
       <Icon name="pins" />
     </Button>
   </div>
-  <div class="map" class:loaded bind:this={el}></div>
+
+  {#if ready}
+    <map-libre bind:this={map}>
+      <maplibre-options
+        slot="options"
+        attribution-control
+        style="https://tiles.stadiamaps.com/styles/outdoors.json"
+        zoom={7}
+      >
+        {#if data.flat().length}
+          <maplibre-bounds slot="bounds" bind:this={bounds}>
+            {#each data.flat() as place}
+              <maplibre-position slot="positions" lon={place.position[0]} lat={place.position[1]}>
+              </maplibre-position>
+            {/each}
+          </maplibre-bounds>
+        {:else}
+          <maplibre-position slot="center" lat={40} lon={-74.5}></maplibre-position>
+        {/if}
+      </maplibre-options>
+
+      <!-- pin image -->
+      <img hidden slot="images" id="pin" src="/pin.svg" alt="" width="64" height="64" />
+
+      <!-- lines -->
+      <maplibre-layer slot="layers" id="lines" type="line" source="routes">
+        <maplibre-layer-layout slot="layout" line-cap="round" line-join="round">
+        </maplibre-layer-layout>
+        <maplibre-layer-paint slot="paint" line-color="#5c7cfa" line-width="4">
+        </maplibre-layer-paint>
+      </maplibre-layer>
+
+      <!-- labels -->
+      <maplibre-layer slot="layers" id="labels" type="symbol" source="places">
+        <maplibre-layer-layout
+          slot="layout"
+          text-field={`["get", "name"]`}
+          text-font={`["Stadia Regular"]`}
+          text-offset={`[0, 0.5]`}
+          text-size={12}
+          text-anchor="top"
+        >
+        </maplibre-layer-layout>
+        <maplibre-layer-paint slot="paint" text-halo-color="#ffffff" text-halo-width={2}>
+        </maplibre-layer-paint>
+      </maplibre-layer>
+
+      <!-- markers -->
+      <maplibre-layer slot="layers" id="markers" type="symbol" source="places">
+        <maplibre-layer-layout
+          slot="layout"
+          icon-image="pin"
+          icon-size={0.5}
+          icon-anchor="bottom"
+          icon-allow-overlap="true"
+        >
+        </maplibre-layer-layout>
+      </maplibre-layer>
+
+      <!-- places -->
+      <maplibre-source slot="sources" id="places" type="geojson">
+        <geojson-featurecollection slot="data">
+          {#each data.flat() as place}
+            <geojson-feature slot="features">
+              <geojson-point slot="geometry">
+                <geojson-coordinate
+                  slot="coordinates"
+                  lon={place.position[0]}
+                  lat={place.position[1]}
+                >
+                </geojson-coordinate>
+              </geojson-point>
+              <geojson-properties slot="properties" name={place.name}> </geojson-properties>
+            </geojson-feature>
+          {/each}
+        </geojson-featurecollection>
+      </maplibre-source>
+
+      <!-- routes -->
+      <maplibre-source slot="sources" id="routes" type="geojson">
+        <geojson-featurecollection slot="data">
+          {#each data.filter((datum): datum is Route => Array.isArray(datum)) as route}
+            <geojson-feature slot="features">
+              <geojson-linestring slot="geometry">
+                {#each route as place}
+                  <geojson-coordinate
+                    slot="coordinates"
+                    lon={place.position[0]}
+                    lat={place.position[1]}
+                  >
+                  </geojson-coordinate>
+                {/each}
+              </geojson-linestring>
+            </geojson-feature>
+          {/each}
+        </geojson-featurecollection>
+      </maplibre-source>
+    </map-libre>
+  {/if}
 </div>
 
 <style>

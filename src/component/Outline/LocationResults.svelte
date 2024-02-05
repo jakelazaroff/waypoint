@@ -1,7 +1,4 @@
 <script lang="ts">
-  import { SearchBoxCore, SessionToken, type SearchBoxSuggestion } from "@mapbox/search-js-core";
-
-  import { PUBLIC_MAPBOX_TOKEN } from "$env/static/public";
   import type { Coordinate, Place } from "~/lib/place";
 
   interface Props {
@@ -10,16 +7,32 @@
     center?: Coordinate;
   }
 
+  interface Suggestion {
+    lat: string;
+    lon: string;
+    name: string;
+    display_name: string;
+  }
+
   const { query, center, onselect } = $props<Props>();
 
-  const search = new SearchBoxCore({ accessToken: PUBLIC_MAPBOX_TOKEN });
-  const sessionToken = new SessionToken();
-  let suggestions = $state<SearchBoxSuggestion[]>([]);
+  let suggestions = $state<Suggestion[]>([]);
 
+  let controller: AbortController | undefined;
   $effect(() => {
-    search.suggest(query, { sessionToken, limit: 10, proximity: center }).then(res => {
-      suggestions = res.suggestions;
-    });
+    if (query.length <= 2) return;
+
+    if (controller) controller.abort();
+    controller = new AbortController();
+    fetch(`/nominatim/search?q=${query}&format=jsonv2`, { signal: controller.signal })
+      .then(res => {
+        controller = undefined;
+        return res.json();
+      })
+      .then(res => {
+        suggestions = res;
+      })
+      .catch(() => console.log("aborted query " + query));
   });
 </script>
 
@@ -29,16 +42,14 @@
       <button
         class="result"
         onclick={async () => {
-          const result = await search.retrieve(suggestion, { sessionToken });
-          const [{ properties }] = result.features;
           onselect({
-            name: properties.name_preferred || properties.name,
-            position: [properties.coordinates.longitude, properties.coordinates.latitude]
+            name: suggestion.name,
+            position: [Number(suggestion.lon), Number(suggestion.lat)]
           });
         }}
       >
-        <span class="name">{suggestion.name_preferred || suggestion.name}</span>
-        <span class="blurb">{suggestion.place_formatted}</span>
+        <span class="name">{suggestion.name}</span>
+        <span class="blurb">{suggestion.display_name}</span>
       </button>
     </li>
   {/each}

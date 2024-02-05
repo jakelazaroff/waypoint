@@ -9,7 +9,7 @@ import type {
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
 
-const regexp = (char: string) => new RegExp(`(^|\\s)${char}([\\w-\\+]+\\s?[\\w-\\+]*)$`);
+const regexp = (char: string) => new RegExp(`(^|\\s)${char}([\\w-\\+]+(?:\\s?[\\w-\\+])*)$`);
 
 function getMatch($position: ResolvedPos) {
   const text = $position.doc.textBetween($position.before(), $position.pos, "\n", "\0");

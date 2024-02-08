@@ -12,15 +12,10 @@
   import { type Place, type Route } from "~/lib/place";
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
-  // import { center } from "~/store/map.svelte";
-  // import { PUBLIC_STADIA_MAPS_API_KEY } from "$env/static/public";
 
   let { places: data } = $props<{ places: Array<Place | Route> }>();
   let map = $state<MapLibre>();
   let bounds = $state<MapLibreBounds>();
-
-  // const style =
-  //   "https://tiles.stadiamaps.com/styles/outdoors.json?api_key=" + PUBLIC_STADIA_MAPS_API_KEY;
 </script>
 
 <div class="wrapper">
@@ -60,15 +55,15 @@
 
       <!-- lines -->
       <maplibre-layer slot="layers" id="lines" type="line" source="routes">
-        <maplibre-layer-layout slot="layout" line-cap="round" line-join="round">
-        </maplibre-layer-layout>
-        <maplibre-layer-paint slot="paint" line-color="#5c7cfa" line-width="4">
-        </maplibre-layer-paint>
+        <maplibre-layer-layout-line slot="layout" line-cap="round" line-join="round">
+        </maplibre-layer-layout-line>
+        <maplibre-layer-paint-line slot="paint" line-color="#5c7cfa" line-width="4">
+        </maplibre-layer-paint-line>
       </maplibre-layer>
 
       <!-- labels -->
       <maplibre-layer slot="layers" id="labels" type="symbol" source="places">
-        <maplibre-layer-layout
+        <maplibre-layer-layout-symbol
           slot="layout"
           text-field={`["get", "name"]`}
           text-font={`["Stadia Regular"]`}
@@ -76,21 +71,21 @@
           text-size={12}
           text-anchor="top"
         >
-        </maplibre-layer-layout>
-        <maplibre-layer-paint slot="paint" text-halo-color="#ffffff" text-halo-width={2}>
-        </maplibre-layer-paint>
+        </maplibre-layer-layout-symbol>
+        <maplibre-layer-paint-symbol slot="paint" text-halo-color="#ffffff" text-halo-width={2}>
+        </maplibre-layer-paint-symbol>
       </maplibre-layer>
 
       <!-- markers -->
       <maplibre-layer slot="layers" id="markers" type="symbol" source="places">
-        <maplibre-layer-layout
+        <maplibre-layer-layout-symbol
           slot="layout"
           icon-image="pin"
           icon-size={0.5}
           icon-anchor="bottom"
           icon-allow-overlap="true"
         >
-        </maplibre-layer-layout>
+        </maplibre-layer-layout-symbol>
       </maplibre-layer>
 
       <!-- places -->

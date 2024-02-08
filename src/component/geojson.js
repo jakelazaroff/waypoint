@@ -1,4 +1,5 @@
-import JSONElement from "./json-element.js";
+import JSONElement, { enableDiff } from "./json-element.js";
+enableDiff();
 
 class GeoJsonFeatureCollection extends JSONElement {
   static tag = "geojson-featurecollection";
@@ -27,12 +28,7 @@ class GeoJsonFeature extends JSONElement {
 class GeoJsonCoordinate extends JSONElement {
   static tag = "geojson-coordinate";
 
-  static get schema() {
-    return {
-      lon: Number,
-      lat: Number
-    };
-  }
+  static schema = { lon: Number, lat: Number };
 
   get json() {
     const { lon, lat } = super.json;
@@ -57,16 +53,15 @@ class GeoJsonLineString extends JSONElement {
   static get schema() {
     return {
       type: "LineString",
-      coordinates: Array(GeoJsonCoordinate)
+      coordinates: [GeoJsonCoordinate]
     };
   }
 }
 
 class GeoJsonProperties extends JSONElement {
   static tag = "geojson-properties";
-  static get schema() {
-    return { name: String };
-  }
+
+  static schema = { name: String };
 }
 
 GeoJsonFeatureCollection.register();

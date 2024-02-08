@@ -1,6 +1,8 @@
 import maplibre, { GeoJSONSource } from "maplibre-gl";
 
-import JSONElement, { Enum, Optional } from "./json-element.js";
+import JSONElement, { enableDiff } from "./json-element.js";
+
+enableDiff();
 
 /** @template T @typedef {T extends { new (...args: any[]): infer U } ? U : never} InstanceOf<T> */
 /** @type {<T extends Function>(base: T) => (x: unknown) => x is InstanceOf<T>} */
@@ -8,17 +10,11 @@ const is =
   // @ts-ignore
   base => x => x instanceof base;
 
-/** @param {string} value */
-const toCoords = value =>
-  value
-    .split(",")
-    .map(x => Number(x))
-    .slice(0, 2);
-
 /** @param {string} key */
 function Todo(key) {
   /** @param {unknown} value */
   return value => {
+    if (value === null) return undefined;
     console.warn(key + " not yet supported");
     return value;
   };
@@ -39,11 +35,11 @@ export class MapLibreBase extends HTMLElement {
 export class MapLibre extends MapLibreBase {
   /** @type {maplibre.Map | undefined} */
   #map;
-
-  static observedAttributes = ["style-src", "center", "zoom"];
+  #loaded = false;
 
   constructor() {
     super();
+
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `
       <div export class="map"></div>
@@ -68,7 +64,7 @@ export class MapLibre extends MapLibreBase {
 
   /** @param {import("./json-element.js").JSONChangeEvent} ev */
   handleEvent(ev) {
-    if (!this.map.isStyleLoaded()) return;
+    if (!this.#loaded) return;
     if (!is(HTMLElement)(ev.target)) return;
 
     switch (ev.target.slot) {
@@ -101,7 +97,13 @@ export class MapLibre extends MapLibreBase {
       const [, key] = path.match(regex) || [];
       switch (key) {
         case "bounds":
-          this.map.fitBounds(options.bounds);
+          if (options.bounds) this.map.fitBounds(options.bounds);
+        case "style-src":
+          if (options["style-src"]) this.map.setStyle(options["style-src"]);
+          break;
+        case "zoom":
+          if (options.zoom) this.map.setZoom(options.zoom);
+          break;
       }
     }
   }
@@ -165,37 +167,14 @@ export class MapLibre extends MapLibreBase {
     if (!(container instanceof HTMLElement)) return;
 
     const [options] = this.slotted("options").filter(is(MapLibreOptions));
-    this.#map = new maplibre.Map({
-      container,
-      ...options.json
-    });
+    this.#map = new maplibre.Map({ container, ...options.json });
 
     this.map.once("load", () => {
+      this.#loaded = true;
       this.updateSources();
       this.updateImages();
       this.updateLayers();
     });
-  }
-
-  /**
-   * @param {string} name
-   * @param {string | null} _prev
-   * @param {string | null} value
-   */
-  attributeChangedCallback(name, _prev, value) {
-    switch (name) {
-      case "style-src":
-        if (value) this.map.setStyle(value);
-        break;
-      case "zoom":
-        if (value) this.map.setZoom(Number(value));
-        break;
-      case "center":
-        if (!value) return;
-        const [lon = 0, lat = 0] = value.split(",").map(x => Number(x));
-        this.map.setCenter([lon, lat]);
-        break;
-    }
   }
 
   slotted(name = "") {
@@ -214,11 +193,11 @@ export class MapLibreOptions extends JSONElement {
   diff = true;
   static get schema() {
     return {
-      "style-url": Optional(String),
-      "attribution-control": Optional(Boolean),
+      "style-url": String,
+      "attribution-control": Boolean,
       "center": MapLibrePosition,
       "bounds": MapLibreBounds,
-      "zoom": Optional(Number)
+      "zoom": Number
     };
   }
 
@@ -246,8 +225,8 @@ export class MapLibreLayer extends JSONElement {
       id: String,
       type: String,
       source: String,
-      paint: MapLibreLayerPaint,
-      layout: MapLibreLayerLayout
+      paint: Object,
+      layout: Object
     };
   }
 }
@@ -257,155 +236,242 @@ export class MapLibreLayerLayout extends JSONElement {
 
   static get schema() {
     return {
-      "visibility": Optional(String),
-      // fill
-      "fill-sort-key": Optional(Number),
-      // line
-      "line-cap": Optional(String),
-      "line-join": Optional(String),
-      "line-miter-limit": Optional(Number),
-      "line-round-limit": Optional(Number),
-      "line-sort-key": Optional(Number),
-      // symbol
-      "symbol-placement": Optional(String),
-      "symbol-spacing": Optional(Number),
-      "symbol-avoid-edges": Optional(Boolean),
-      "symbol-sort-key": Optional(Number),
-      "symbol-z-order": Optional(String),
-      "icon-allow-overlap": Optional(Boolean),
-      "icon-overlap": Optional(String),
-      "icon-ignore-placement": Optional(Boolean),
-      "icon-optional": Optional(Boolean),
-      "icon-rotation-alignment": Optional(String),
-      "icon-size": Optional(Number),
-      "icon-text-fit": Optional(String),
-      "icon-text-fit-padding": Optional(Todo("icon-text-fit-padding")),
-      "icon-image": Optional(String),
-      "icon-rotate": Optional(Number),
-      "icon-padding": Optional(Todo("icon-padding")),
-      "icon-keep-upright": Optional(Boolean),
-      "icon-offset": Optional(Todo("icon-offset")),
-      "icon-anchor": Optional(String),
-      "icon-pitch-alignment": Optional(String),
-      "text-pitch-alignment": Optional(String),
-      "text-rotation-a7lignment": Optional(String),
-      "text-field": Optional(x => JSON.parse(x)),
-      "text-font": Optional(x => JSON.parse(x)),
-      "text-size": Optional(Number),
-      "text-max-width": Optional(Number),
-      "text-line-height": Optional(Number),
-      "text-letter-spacing": Optional(Number),
-      "text-justify": Optional(String),
-      "text-radial-offset": Optional(Number),
-      "text-variable-anchor": Optional(Todo("text-variable-anchor")),
-      "text-variable-anchor-offset": Optional(Todo("text-variable-anchor-offset")),
-      "text-anchor": Optional(String),
-      "text-max-angle": Optional(Number),
-      "text-writing-mode": Optional(Todo("text-writing-mode")),
-      "text-rotate": Optional(Number),
-      "text-padding": Optional(Number),
-      "text-keep-upright": Optional(Boolean),
-      "text-transform": Optional(String),
-      "text-offset": Optional(x => JSON.parse(x)),
-      "text-allow-overlap": Optional(Boolean),
-      "text-overlap": Optional(String),
-      "text-ignore-placement": Optional(Boolean),
-      "text-optional": Optional(Boolean),
-      // circle
-      "circle-sort-key": Optional(Number)
+      visibility: String
     };
   }
 }
 
-export class MapLibreLayerPaint extends JSONElement {
-  static tag = /** @type {const} */ ("maplibre-layer-paint");
+export class MapLibreLayerPaintBackground extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-paint-background");
 
   static get schema() {
     return {
-      // background
-      "background-color": Optional(String),
-      "background-opacity": Optional(Number),
-      "background-pattern": Optional(String),
-      // fill
-      "fill-antialias": Optional(Boolean),
-      "fill-color": Optional(String),
-      "fill-opacity": Optional(Number),
-      "fill-outline-color": Optional(String),
-      "fill-pattern": Optional(String),
-      "fill-translate": Optional(Todo("fill-stranslate")),
-      "fill-translate-anchor": Optional(String),
-      // line
-      "line-blur": Optional(Number),
-      "line-color": Optional(String),
-      "line-dasharray": Optional(Todo("line-dasharray")),
-      "line-gap-width": Optional(Number),
-      "line-gradient": Optional(String),
-      "line-offset": Optional(Number),
-      "line-opacity": Optional(Number),
-      "line-pattern": Optional(String),
-      "line-translate": Optional(Todo("line-translate")),
-      "line-translate-anchor": Optional(String),
-      "line-width": Optional(Number),
-      // symbol
-      "icon-opacity": Optional(Number),
-      "icon-color": Optional(String),
-      "icon-halo-color": Optional(String),
-      "icon-halo-width": Optional(Number),
-      "icon-halo-blur": Optional(Number),
-      "icon-translate": Optional(Todo("icon-translate")),
-      "icon-translate-anchor": Optional(String),
-      "text-opacity": Optional(Number),
-      "text-color": Optional(String),
-      "text-halo-color": Optional(String),
-      "text-halo-width": Optional(Number),
-      "text-halo-blur": Optional(Number),
-      "text-translate": Optional(Todo("text-translate")),
-      "text-translate-anchor": Optional(String),
-      // circle
-      "circle-radius": Optional(Number),
-      "circle-color": Optional(String),
-      "circle-blur": Optional(Number),
-      "circle-opacity": Optional(Number),
-      "circle-translate": Optional(Todo("circle-translate")),
-      "circle-translate-anchor": Optional(String),
-      "circle-pitch-scale": Optional(Enum("map", "viewport")),
-      "circle-pitch-alignment": Optional(Enum("map", "viewport")),
-      "circle-stroke-width": Optional(Number),
-      "circle-stroke-color": Optional(String),
-      "circle-stroke-opacity": Optional(Number),
-      // heatmap
-      "heatmap-radius": Optional(Number),
-      "heatmap-weight": Optional(Number),
-      "heatmap-intensity": Optional(Number),
-      "heatmap-color": Optional(Todo("heatmap-color")),
-      "heatmap-opacity": Optional(Number),
-      // fill extrusion
-      "fill-extrusion-opacity": Optional(Number),
-      "fill-extrusion-color": Optional(String),
-      "fill-extrusion-translate": Optional(Todo("fill-extrusion-translate")),
-      "fill-extrusion-translate-anchor": Optional(String),
-      "fill-extrusion-pattern": Optional(String),
-      "fill-extrusion-height": Optional(Number),
-      "fill-extrusion-base": Optional(Number),
-      "fill-extrusion-vertical-gradient": Optional(Boolean),
-      // raster
-      "raster-opacity": Optional(Number),
-      "raster-hue-rotate": Optional(Number),
-      "raster-brightness-min": Optional(Number),
-      "raster-brightness-max": Optional(Number),
-      "raster-saturation": Optional(Number),
-      "raster-contrast": Optional(Number),
-      "raster-resampling": Optional(String),
-      "raster-fade-duration": Optional(Number),
-      // hillshade
-      "hillshade-illumination-direction": Optional(Number),
-      "hillshade-illumination-anchor": Optional(String),
-      "hillshade-exaggeration": Optional(Number),
-      "hillshade-shadow-color": Optional(String),
-      "hillshade-highlight-color": Optional(String),
-      "hillshade-accent-color": Optional(String)
+      "background-color": String,
+      "background-opacity": Number,
+      "background-pattern": String
     };
   }
+}
+
+export class MapLibreLayerLayoutCircle extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-layout-circle");
+
+  static schema = {
+    "visibility": String,
+    "circle-sort-key": Number
+  };
+}
+
+export class MapLibreLayerPaintCircle extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-paint-circle");
+
+  static get schema() {
+    return {
+      "circle-radius": Number,
+      "circle-color": String,
+      "circle-blur": Number,
+      "circle-opacity": Number,
+      "circle-translate": Todo("circle-translate"),
+      "circle-translate-anchor": String,
+      "circle-pitch-scale": String,
+      "circle-pitch-alignment": String,
+      "circle-stroke-width": Number,
+      "circle-stroke-color": String,
+      "circle-stroke-opacity": Number
+    };
+  }
+}
+
+export class MapLibreLayerLayoutFill extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-layout-fill");
+
+  static schema = {
+    "visibility": String,
+    "fill-sort-key": Number
+  };
+}
+
+export class MapLibreLayerPaintFill extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-paint-fill");
+
+  static get schema() {
+    return {
+      "fill-antialias": Boolean,
+      "fill-color": String,
+      "fill-opacity": Number,
+      "fill-outline-color": String,
+      "fill-pattern": String,
+      "fill-translate": Todo("fill-translate"),
+      "fill-translate-anchor": String
+    };
+  }
+}
+
+export class MapLibreLayerPaintFillExtrusion extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-paint-fillextrusion");
+
+  static get schema() {
+    return {
+      "fill-extrusion-opacity": Number,
+      "fill-extrusion-color": String,
+      "fill-extrusion-translate": Todo("fill-extrusion-translate"),
+      "fill-extrusion-translate-anchor": String,
+      "fill-extrusion-pattern": String,
+      "fill-extrusion-height": Number,
+      "fill-extrusion-base": Number,
+      "fill-extrusion-vertical-gradient": Boolean
+    };
+  }
+}
+
+export class MapLibreLayerPaintHeatmap extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-paint-heatmap");
+
+  static get schema() {
+    return {
+      "heatmap-radius": Number,
+      "heatmap-weight": Number,
+      "heatmap-intensity": Number,
+      "heatmap-color": Todo("heatmap-color"),
+      "heatmap-opacity": Number
+    };
+  }
+}
+
+export class MapLibreLayerPaintHillshade extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-paint-hillshade");
+
+  static get schema() {
+    return {
+      "hillshade-illumination-direction": Number,
+      "hillshade-illumination-anchor": String,
+      "hillshade-exaggeration": Number,
+      "hillshade-shadow-color": String,
+      "hillshade-highlight-color": String,
+      "hillshade-accent-color": String
+    };
+  }
+}
+
+export class MapLibreLayerLayoutLine extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-layout-line");
+
+  static schema = {
+    "visibility": String,
+    "line-cap": String,
+    "line-join": String,
+    "line-miter-limit": Number,
+    "line-round-limit": Number,
+    "line-sort-key": Number
+  };
+}
+
+export class MapLibreLayerPaintLine extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-paint-line");
+
+  static schema = {
+    "line-blur": Number,
+    "line-color": String,
+    "line-dasharray": Todo("line-dasharray"),
+    "line-gap-width": Number,
+    "line-gradient": String,
+    "line-offset": Number,
+    "line-opacity": Number,
+    "line-pattern": String,
+    "line-translate": Todo("line-translate"),
+    "line-translate-anchor": String,
+    "line-width": Number
+  };
+}
+
+export class MapLibreLayerPaintRaster extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-paint-raster");
+
+  static get schema() {
+    return {
+      "raster-opacity": Number,
+      "raster-hue-rotate": Number,
+      "raster-brightness-min": Number,
+      "raster-brightness-max": Number,
+      "raster-saturation": Number,
+      "raster-contrast": Number,
+      "raster-resampling": String,
+      "raster-fade-duration": Number
+    };
+  }
+}
+
+export class MapLibreLayerLayoutSymbol extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-layout-symbol");
+
+  static schema = {
+    "visibility": String,
+    "symbol-placement": String,
+    "symbol-spacing": Number,
+    "symbol-avoid-edges": Boolean,
+    "symbol-sort-key": Number,
+    "symbol-z-order": String,
+    "icon-allow-overlap": Boolean,
+    "icon-overlap": String,
+    "icon-ignore-placement": Boolean,
+    "icon-optional": Boolean,
+    "icon-rotation-alignment": String,
+    "icon-size": Number,
+    "icon-text-fit": String,
+    "icon-text-fit-padding": Todo("icon-text-fit-padding"),
+    "icon-image": String,
+    "icon-rotate": Number,
+    "icon-padding": Todo("icon-padding"),
+    "icon-keep-upright": Boolean,
+    "icon-offset": Todo("icon-offset"),
+    "icon-anchor": String,
+    "icon-pitch-alignment": String,
+    "text-pitch-alignment": String,
+    "text-rotation-a7lignment": String,
+    "text-field": x => (x === null ? undefined : JSON.parse(x)),
+    "text-font": x => (x === null ? undefined : JSON.parse(x)),
+    "text-size": Number,
+    "text-max-width": Number,
+    "text-line-height": Number,
+    "text-letter-spacing": Number,
+    "text-justify": String,
+    "text-radial-offset": Number,
+    "text-variable-anchor": Todo("text-variable-anchor"),
+    "text-variable-anchor-offset": Todo("text-variable-anchor-offset"),
+    "text-anchor": String,
+    "text-max-angle": Number,
+    "text-writing-mode": Todo("text-writing-mode"),
+    "text-rotate": Number,
+    "text-padding": Number,
+    "text-keep-upright": Boolean,
+    "text-transform": String,
+    "text-offset": x => (x === null ? undefined : JSON.parse(x)),
+    "text-allow-overlap": Boolean,
+    "text-overlap": String,
+    "text-ignore-placement": Boolean,
+    "text-optional": Boolean
+  };
+}
+
+export class MapLibreLayerPaintSymbol extends JSONElement {
+  static tag = /** @type {const} */ ("maplibre-layer-paint-symbol");
+
+  static schema = {
+    "icon-opacity": Number,
+    "icon-color": String,
+    "icon-halo-color": String,
+    "icon-halo-width": Number,
+    "icon-halo-blur": Number,
+    "icon-translate": Todo("icon-translate"),
+    "icon-translate-anchor": String,
+    "text-opacity": Number,
+    "text-color": String,
+    "text-halo-color": String,
+    "text-halo-width": Number,
+    "text-halo-blur": Number,
+    "text-translate": Todo("text-translate"),
+    "text-translate-anchor": String
+  };
 }
 
 export class MapLibrePosition extends JSONElement {
@@ -464,10 +530,32 @@ const TAGS = {
   [MapLibrePosition.tag]: MapLibrePosition,
   [MapLibreBounds.tag]: MapLibreBounds,
   [MapLibreOptions.tag]: MapLibreOptions,
-  [MapLibreLayerLayout.tag]: MapLibreLayerLayout,
-  [MapLibreLayerPaint.tag]: MapLibreLayerPaint,
+  [MapLibreSource.tag]: MapLibreSource,
+  // layers
   [MapLibreLayer.tag]: MapLibreLayer,
-  [MapLibreSource.tag]: MapLibreSource
+  [MapLibreLayerLayout.tag]: MapLibreLayerLayout,
+  // background layer styles
+  [MapLibreLayerPaintBackground.tag]: MapLibreLayerPaintBackground,
+  // circle layer styles
+  [MapLibreLayerLayoutCircle.tag]: MapLibreLayerLayoutCircle,
+  [MapLibreLayerPaintCircle.tag]: MapLibreLayerPaintCircle,
+  // fill layer styles
+  [MapLibreLayerLayoutFill.tag]: MapLibreLayerLayoutFill,
+  [MapLibreLayerPaintFill.tag]: MapLibreLayerPaintFill,
+  // fill extrusion layer styles
+  [MapLibreLayerPaintFillExtrusion.tag]: MapLibreLayerPaintFillExtrusion,
+  // heatmap layer styles
+  [MapLibreLayerPaintHeatmap.tag]: MapLibreLayerPaintHeatmap,
+  // hillshade layer styles
+  [MapLibreLayerPaintHillshade.tag]: MapLibreLayerPaintHillshade,
+  // line layer styles
+  [MapLibreLayerLayoutLine.tag]: MapLibreLayerLayoutLine,
+  [MapLibreLayerPaintLine.tag]: MapLibreLayerPaintLine,
+  // raster layer styles
+  [MapLibreLayerPaintRaster.tag]: MapLibreLayerPaintRaster,
+  // symbol layer styles
+  [MapLibreLayerLayoutSymbol.tag]: MapLibreLayerLayoutSymbol,
+  [MapLibreLayerPaintSymbol.tag]: MapLibreLayerPaintSymbol
 };
 
 /** @param {{ [K in keyof typeof TAGS]?: `${string}-${string}`}} [tags] */

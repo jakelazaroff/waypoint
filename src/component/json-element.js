@@ -7,64 +7,30 @@
  * @property {unknown} [value]
  */
 
-/** @typedef {CustomEvent<{ patches?: Patch[] }>} JSONChangeEvent
+/**
+ * @typedef {CustomEvent<{ patches?: Patch[] }>} JSONChangeEvent
  * An event emitted when the JSON changes, optionally containing an array of JSON Patch operations.
  */
 
 const LITERAL_TYPES = new Set(["boolean", "number", "string", "null"]);
-const PROPERTY_TYPES = new Set([Boolean, Number, String]);
 
-/**
- * Indicate that a schema property is optional.
- * @template T
- * @param {(value: unknown) => T} fn
- */
-export function Optional(fn) {
-  return (/** @type {T} */ value) => (value === null ? undefined : fn(value));
-}
-
-/** @param {Array<boolean | number | string | null>} literals */
-export function Enum(...literals) {
-  return (/** @type {unknown} */ value) => {
-    for (const literal of literals) {
-      if (value !== literal) continue;
-      switch (typeof literal) {
-        case "boolean":
-          return Boolean(value);
-        case "number":
-          return Number(value);
-        case "string":
-          return String(value);
-        default:
-          return value;
-      }
-    }
-
-    console.warn(`${value} must be one of ${literals.join(", ")}`);
-    return value;
-  };
-}
-
-/** @param {unknown} value */
+/** @param {any} value */
 const isArraySchema = value => Array.isArray(value) || value === Array;
 
-/** @param {unknown} value */
-const isObjectSchema = value =>
-  /** @type {any} */ (value)?.prototype instanceof JSONElement || value === Object;
+/** @param {any} value */
+const isObjectSchema = value => value?.prototype instanceof JSONElement || value === Object;
 
 /** @param {unknown} value */
 const isCompositeSchema = value => isArraySchema(value) || isObjectSchema(value);
 
-/**
- * @param {unknown} obj
- * @returns {obj is JSONElement}
- */
-function isJson(obj) {
+/** @returns {obj is JSONElement} */
+function isJSONElement(obj) {
   return obj instanceof JSONElement;
 }
 
 export default class JSONElement extends HTMLElement {
   static tag = "json-webcomponent";
+
   static register(tag = this.tag) {
     const ce = customElements.get(tag);
     if (ce === this) return;
@@ -81,6 +47,21 @@ export default class JSONElement extends HTMLElement {
     return {};
   }
 
+  /**
+   * @param {any} _prev
+   * @param {any} _next
+   * @param {string} [_path]
+   * @returns {Patch[]}
+   */
+  static diff(_prev, _nex, _path) {
+    console.warn(`Import and call enableDiff() to generate diffs.`);
+    return [];
+  }
+
+  static get observedAttributes() {
+    return Object.keys(this.schema);
+  }
+
   /** Whether a task is queued to emit a `json-change` event */
   #queued = false;
 
@@ -92,6 +73,7 @@ export default class JSONElement extends HTMLElement {
     const root = this.attachShadow({ mode: "open" });
 
     this.addEventListener("json-change", this);
+    root.addEventListener("slotchange", this);
 
     for (const [key, value] of Object.entries(this.schema)) {
       if (!isCompositeSchema(value)) continue;
@@ -102,35 +84,42 @@ export default class JSONElement extends HTMLElement {
     }
   }
 
-  static get observedAttributes() {
-    return Object.keys(this.schema);
-  }
-
   attributeChangedCallback() {
-    // if there are no changes, queue a microtask to notify
-    if (!this.#queued) queueMicrotask(() => this.#notify());
-    this.#queued = true;
+    // queue a `json-change` event dispatch
+    this.#queue();
   }
 
   /** @param {JSONChangeEvent} ev */
   handleEvent(ev) {
     switch (ev.type) {
+      case "slotchange": {
+        // queue a `json-change` event dispatch
+        this.#queue();
+        break;
+      }
+
       // batch multiple `json-change` events from descendants
       case "json-change": {
         const target = ev.target;
 
         // if this element dispatched the event, let it through
         if (target === this) return;
-        if (!isJson(target)) return;
+        if (!(target instanceof JSONElement)) return;
 
         // prevent any other handlers from handling the event
         ev.stopImmediatePropagation();
 
-        // if there are no changes, queue a microtask to notify
-        if (!this.#queued) queueMicrotask(() => this.#notify());
-        this.#queued = true;
+        // queue a `json-change` event dispatch
+        this.#queue();
+        break;
       }
     }
+  }
+
+  #queue() {
+    // if there are no changes, queue a microtask to notify
+    if (!this.#queued) queueMicrotask(() => this.#notify());
+    this.#queued = true;
   }
 
   #notify() {
@@ -159,38 +148,45 @@ export default class JSONElement extends HTMLElement {
 
   get json() {
     /** @type {any} */
-    const result = {};
+    const json = {};
 
     for (const [k, v] of Object.entries(this.schema)) {
       // literals in the schema should go as is
       if (LITERAL_TYPES.has(typeof v)) {
-        result[k] = v;
-        continue;
+        json[k] = v;
+      }
+
+      // primitive constructors should coerce the corresponding attribute
+      else if (v === Boolean) json[k] = this.getAttribute(k) !== null;
+      else if (v === String) {
+        const value = this.getAttribute(k);
+        if (value !== null) json[k] = value;
+      } else if (v === Number) {
+        const value = this.getAttribute(k),
+          num = Number(value);
+        if (value !== null && !Number.isNaN(num)) json[k] = num;
       }
 
       // arrays in the schema should use the corresponding slot elements' json
-      if (isArraySchema(v)) {
+      else if (isArraySchema(v)) {
         const els = this.#slotted(k);
-        result[k] = els.map(el => el.json);
-        continue;
+        json[k] = els.map(el => el.json);
       }
 
       // objects in the schema should use json from the corresponding slot's first element
-      if (isObjectSchema(v)) {
+      else if (isObjectSchema(v)) {
         const [el] = this.#slotted(k);
-        if (el) result[k] = el.json;
-        continue;
+        if (el) json[k] = el.json;
       }
 
       // functions in the schema should coerce the corresponding attribute
-      if (PROPERTY_TYPES.has(v) || typeof v === "function") {
+      else if (typeof v === "function") {
         const value = v(this.getAttribute(k));
-        if (value !== undefined) result[k] = value;
-        continue;
+        if (value !== undefined) json[k] = value;
       }
     }
 
-    return result;
+    return json;
   }
 
   #slotted(name = "") {
@@ -201,7 +197,9 @@ export default class JSONElement extends HTMLElement {
     const slot = this.shadowRoot?.querySelector(selector);
 
     const els = slot?.assignedElements() || [];
-    return els.filter(isJson);
+    return els.filter(
+      /** @type {(el: Element) => el is JSONElement} */ (el => el instanceof JSONElement)
+    );
   }
 }
 
@@ -220,8 +218,8 @@ function append(path, prop) {
 }
 
 /** @param {any} x */
-function isObject(x) {
-  return typeof x == "object" && x !== null;
+function isScalar(x) {
+  return typeof x !== "object" || x === null;
 }
 
 /**
@@ -231,10 +229,11 @@ function isObject(x) {
  * @returns {Patch[]}
  */
 function diff(prev, next, path = "") {
-  // if prev and next aren't equal and at least one is a scalar, replace it
-  if (prev !== next && (!isObject(prev) || !isObject(next))) {
-    return [{ op: "replace", path, value: next }];
-  }
+  // if prev and next are strictly equal, don't bother checking further
+  if (prev === next) return [];
+
+  // if at least one value is a scalar, replace it
+  if (isScalar(prev) || isScalar(next)) return [{ op: "replace", path, value: next }];
 
   /** @type {Patch[]} */
   const patches = [];
@@ -248,7 +247,7 @@ function diff(prev, next, path = "") {
       patches.push({ op: "add", path: newPath, value: next[prop] });
     }
 
-    // …otherwise, if both prev and next are objects, recurse into them and add any nested patches
+    // …otherwise, if both prev and next are objects or arrays, recurse into them and add any nested patches
     else if (typeof next[prop] === "object" && typeof prev[prop] === "object") {
       patches.push(...diff(prev[prop], next[prop], newPath));
     }
@@ -268,4 +267,9 @@ function diff(prev, next, path = "") {
   }
 
   return patches;
+}
+
+/** Enable elements to include JSON Patch operations in `json-change` event details. */
+export function enableDiff() {
+  JSONElement.diff = diff;
 }

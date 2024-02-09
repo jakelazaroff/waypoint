@@ -1,7 +1,5 @@
 import maplibre, { GeoJSONSource } from "maplibre-gl";
-
-import JSONElement, { enableDiff } from "./json-element.js";
-
+import JSONElement, { enableDiff } from "@jakelazaroff/jsonelement";
 enableDiff();
 
 /** @template T @typedef {T extends { new (...args: any[]): infer U } ? U : never} InstanceOf<T> */
@@ -43,14 +41,11 @@ export class MapLibre extends MapLibreBase {
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `
       <div export class="map"></div>
-      <slot name="options"></slot>
-      <slot name="layers"></slot>
-      <slot name="sources"></slot>
-      <slot name="images"></slot>
+      <slot></slot>
       <style>
-        slot { display: none; }
-        canvas { display: block; }
         .map { width: 100%; height: 100%; }
+        canvas { display: block; }
+        slot { display: none; }
       </style>
     `;
 
@@ -65,31 +60,16 @@ export class MapLibre extends MapLibreBase {
   /** @param {import("./json-element.js").JSONChangeEvent} ev */
   handleEvent(ev) {
     if (!this.#loaded) return;
-    if (!is(HTMLElement)(ev.target)) return;
 
-    switch (ev.target.slot) {
-      case "options":
-        this.updateOptions(ev.detail.patches);
-        break;
-
-      case "layers":
-        if (!is(MapLibreLayer)(ev.target)) return;
-        this.updateLayer(ev.target, ev.detail.patches);
-        break;
-
-      case "images":
-        this.updateImages();
-        break;
-
-      case "sources":
-        this.updateSources();
-        break;
-    }
+    if (ev.target instanceof MapLibreOptions) this.updateOptions(ev.detail.patches);
+    else if (ev.target instanceof MapLibreLayer) this.updateLayer(ev.target, ev.detail.patches);
+    else if (ev.target instanceof HTMLImageElement) this.updateImages();
+    else if (ev.target instanceof HTMLSourceElement) this.updateSources();
   }
 
   /** @param {import("./json-element.js").Patch[]} patches */
   updateOptions(patches = []) {
-    const [el] = this.slotted("options").filter(is(MapLibreOptions));
+    const [el] = this.slotted(MapLibreOptions);
     const options = el.json;
 
     const regex = /^\/(.+?)\//;
@@ -109,7 +89,7 @@ export class MapLibre extends MapLibreBase {
   }
 
   updateLayers() {
-    const layers = this.slotted("layers").filter(is(MapLibreLayer));
+    const layers = this.slotted(MapLibreLayer);
 
     for (const layer of layers) {
       this.updateLayer(layer);
@@ -138,9 +118,7 @@ export class MapLibre extends MapLibreBase {
 
   updateSources() {
     // get a list of all sources
-    const sources = this.slotted("sources")
-      .filter(is(JSONElement))
-      .map(el => el.json);
+    const sources = this.slotted(MapLibreSource).map(el => el.json);
 
     // for each source…
     for (const { id, ...json } of sources) {
@@ -153,7 +131,7 @@ export class MapLibre extends MapLibreBase {
   }
 
   updateImages() {
-    const images = this.slotted("images").filter(is(HTMLImageElement));
+    const images = this.slotted(HTMLImageElement);
 
     for (const img of images) {
       const image = this.map.getImage(img.id);
@@ -166,7 +144,7 @@ export class MapLibre extends MapLibreBase {
     const container = this.shadowRoot?.querySelector(".map");
     if (!(container instanceof HTMLElement)) return;
 
-    const [options] = this.slotted("options").filter(is(MapLibreOptions));
+    const [options] = this.slotted(MapLibreOptions);
     this.#map = new maplibre.Map({ container, ...options.json });
 
     this.map.once("load", () => {
@@ -177,20 +155,22 @@ export class MapLibre extends MapLibreBase {
     });
   }
 
-  slotted(name = "") {
-    let selector = "slot";
-    if (name) selector += `[name=${name}]`;
-
+  /**
+   * @template {typeof HTMLElement} T
+   * @param {T} tag
+   */
+  slotted(tag) {
     /** @type {HTMLSlotElement | null | undefined} */
-    const slot = this.shadowRoot?.querySelector(selector);
-    return slot?.assignedElements() || [];
+    const slot = this.shadowRoot?.querySelector("slot");
+    const els = slot?.assignedElements() || [];
+
+    return els.filter(is(tag));
   }
 }
 
 export class MapLibreOptions extends JSONElement {
   static tag = /** @type {const} */ ("maplibre-options");
 
-  diff = true;
   static get schema() {
     return {
       "style-url": String,
@@ -219,7 +199,7 @@ export class MapLibreOptions extends JSONElement {
 
 export class MapLibreLayer extends JSONElement {
   static tag = /** @type {const} */ ("maplibre-layer");
-  diff = true;
+
   static get schema() {
     return {
       id: String,

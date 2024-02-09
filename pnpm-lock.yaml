@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@jakelazaroff/jsonelement':
+    specifier: ^0.2.0
+    version: 0.2.0
   '@stadiamaps/api':
     specifier: ^1.0.10
     version: 1.0.10
@@ -285,6 +288,10 @@ packages:
     os: [win32]
     requiresBuild: true
     optional: true
+
+  /@jakelazaroff/jsonelement@0.2.0:
+    resolution: {integrity: sha512-z1VobLtGoQNG+TQnBFPa5vezkyLHfzLEi9Xu8ny9GB4mT5dxnbmZWsfY7WpreUUN8hyNzEUhMMK1PBQk1PLQHw==}
+    dev: false
 
   /@jridgewell/gen-mapping@0.3.3:
     resolution: {integrity: sha512-HLhSWOLRi875zjjMG/r+Nv0oCW8umGb0BgEhyX3dDX3egwZtB8PqLnjz3yedt8R5StBrzcg4aBpnh8UA9D1BoQ==}

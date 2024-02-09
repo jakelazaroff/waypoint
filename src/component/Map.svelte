@@ -32,12 +32,7 @@
 
   {#if ready}
     <map-libre bind:this={map}>
-      <maplibre-options
-        slot="options"
-        attribution-control
-        style-url="https://tiles.stadiamaps.com/styles/outdoors.json"
-        zoom={7}
-      >
+      <maplibre-options diff style-url="https://tiles.stadiamaps.com/styles/outdoors.json" zoom={7}>
         {#if data.flat().length}
           <maplibre-bounds slot="bounds" bind:this={bounds}>
             {#each data.flat() as place}
@@ -51,10 +46,10 @@
       </maplibre-options>
 
       <!-- pin image -->
-      <img hidden slot="images" id="pin" src="/pin.svg" alt="" width="64" height="64" />
+      <img hidden id="pin" src="/pin.svg" alt="" width="64" height="64" />
 
       <!-- lines -->
-      <maplibre-layer slot="layers" id="lines" type="line" source="routes">
+      <maplibre-layer diff id="lines" type="line" source="routes">
         <maplibre-layer-layout-line slot="layout" line-cap="round" line-join="round">
         </maplibre-layer-layout-line>
         <maplibre-layer-paint-line slot="paint" line-color="#5c7cfa" line-width="4">
@@ -62,7 +57,7 @@
       </maplibre-layer>
 
       <!-- labels -->
-      <maplibre-layer slot="layers" id="labels" type="symbol" source="places">
+      <maplibre-layer diff id="labels" type="symbol" source="places">
         <maplibre-layer-layout-symbol
           slot="layout"
           text-field={`["get", "name"]`}
@@ -77,7 +72,7 @@
       </maplibre-layer>
 
       <!-- markers -->
-      <maplibre-layer slot="layers" id="markers" type="symbol" source="places">
+      <maplibre-layer diff id="markers" type="symbol" source="places">
         <maplibre-layer-layout-symbol
           slot="layout"
           icon-image="pin"
@@ -89,7 +84,7 @@
       </maplibre-layer>
 
       <!-- places -->
-      <maplibre-source slot="sources" id="places" type="geojson">
+      <maplibre-source id="places" type="geojson">
         <geojson-featurecollection slot="data">
           {#each data.flat() as place}
             <geojson-feature slot="features">
@@ -108,7 +103,7 @@
       </maplibre-source>
 
       <!-- routes -->
-      <maplibre-source slot="sources" id="routes" type="geojson">
+      <maplibre-source id="routes" type="geojson">
         <geojson-featurecollection slot="data">
           {#each data.filter((datum): datum is Route => Array.isArray(datum)) as route}
             <geojson-feature slot="features">

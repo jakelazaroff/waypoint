@@ -1,4 +1,4 @@
-import JSONElement, { enableDiff } from "./json-element.js";
+import JSONElement, { enableDiff } from "@jakelazaroff/jsonelement";
 enableDiff();
 
 class GeoJsonFeatureCollection extends JSONElement {

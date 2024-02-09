@@ -94,6 +94,7 @@
       "data view" 1fr
       / 1fr 1fr;
     height: 100%;
+    overflow: hidden;
   }
 
   .data {
@@ -101,6 +102,7 @@
     grid-template:
       "toolbar" auto
       "outline" 1fr;
+    height: 100%;
     overflow: hidden;
   }
 

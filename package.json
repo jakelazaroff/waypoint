@@ -27,6 +27,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@jakelazaroff/jsonelement": "^0.2.0",
 		"@stadiamaps/api": "^1.0.10",
 		"@sveltejs/adapter-auto": "^3.1.1",
 		"maplibre-gl": "^4.0.0",

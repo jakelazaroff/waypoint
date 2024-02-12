@@ -1,38 +1,53 @@
 <script lang="ts">
+  import * as Y from "yjs";
+  import { IndexeddbPersistence } from "y-indexeddb";
   import "~/style/style.css";
   import Map from "~/component/Map.svelte";
-  import Outline from "~/component/Outline/Outline.svelte";
+  import Outline from "~/component/Outline.svelte";
   import Icon from "~/component/Icon.svelte";
   import { type Place, type Route } from "~/lib/place";
-  import { onMount } from "svelte";
   import Toggle from "~/component/Toggle.svelte";
   import Button from "~/component/Button.svelte";
 
-  let doc = $state<any>({});
-  let focus = $state<any>(undefined);
-  let focused = $state(false);
-  let outline = $state<Outline>();
-  onMount(() => {
-    const json = localStorage.getItem("travel");
-    if (!json) return;
+  const ydoc = new Y.Doc();
+  const fragment = ydoc.getXmlFragment("outline");
+  new IndexeddbPersistence("y-indexeddb", ydoc);
 
-    const doc = JSON.parse(json);
-    outline?.load(doc);
-  });
+  let doc = $state(fragment.toDOM());
+  ydoc.on("update", () => (doc = fragment.toDOM()));
 
-  $effect(() => {
-    localStorage.setItem("travel", JSON.stringify(doc));
-  });
+  let places = $derived(doc instanceof DocumentFragment ? getPlaces(doc) : []);
+  let routes = $derived(getRoutes(doc));
 
-  function getPlaces(node: any): Array<Route | Place> {
-    if (node?.type === "tag") return [node.attrs.data];
-    const content = (node?.content || []).flatMap((node: any) => getPlaces(node));
+  function getPlaces(root: DocumentFragment | Element): Place[] {
+    const places: Place[] = [];
 
-    if (node?.type === "route") return [content];
-    return content;
+    for (const el of root.querySelectorAll("place")) {
+      const name = el.getAttribute("name");
+      const lon = Number(el.getAttribute("lon"));
+      const lat = Number(el.getAttribute("lat"));
+
+      if (!name || Number.isNaN(lon) || Number.isNaN(lat)) continue;
+      places.push({ type: "place", name, position: [lon, lat] });
+    }
+
+    return places;
   }
 
-  let places = $derived(getPlaces((focused && focus) || doc));
+  function getRoutes(root: Node): Route[] {
+    if (root instanceof Element && root.tagName === "ROUTE") {
+    }
+
+    for (const child of root.childNodes) {
+      getRoutes(child);
+    }
+
+    return [];
+  }
+
+  // let doc = $state<any>({});
+  let focused = $state(false);
+  let outline = $state<Outline>();
 </script>
 
 <svelte:head>
@@ -44,14 +59,13 @@
     <div class="toolbar">
       <Button
         onclick={() => {
-          const filename = prompt("Enter a filename");
-          if (!filename) return;
-
-          const a = document.createElement("a");
-          const file = new Blob([JSON.stringify(doc)], { type: "application/json" });
-          a.href = URL.createObjectURL(file);
-          a.download = `${filename}.json`;
-          a.click();
+          // const filename = prompt("Enter a filename");
+          // if (!filename) return;
+          // const a = document.createElement("a");
+          // const file = new Blob([JSON.stringify(doc)], { type: "application/json" });
+          // a.href = URL.createObjectURL(file);
+          // a.download = `${filename}.json`;
+          // a.click();
         }}
       >
         <Icon name="save" />
@@ -59,18 +73,16 @@
       </Button>
       <Button
         onclick={() => {
-          const input = document.createElement("input");
-          input.type = "file";
-
-          input.onchange = async () => {
-            const file = input.files?.[0];
-            if (!file) return;
-            const json = await file.text();
-            const doc = JSON.parse(json);
-            outline?.load(doc);
-          };
-
-          input.click();
+          // const input = document.createElement("input");
+          // input.type = "file";
+          // input.onchange = async () => {
+          //   const file = input.files?.[0];
+          //   if (!file) return;
+          //   const json = await file.text();
+          //   const doc = JSON.parse(json);
+          //   outline?.load(doc);
+          // };
+          // input.click();
         }}
       >
         <Icon name="open" />
@@ -82,9 +94,9 @@
         </Toggle>
       </div>
     </div>
-    <Outline bind:this={outline} bind:document={doc} bind:focus bind:focused />
+    <Outline bind:this={outline} document={fragment} bind:focused />
   </div>
-  <Map {places} />
+  <Map {places} {routes} />
 </div>
 
 <style>

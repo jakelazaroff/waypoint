@@ -13,7 +13,7 @@
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
 
-  let { places: data } = $props<{ places: Array<Place | Route> }>();
+  let { places, routes } = $props<{ places: Place[]; routes: Route[] }>();
   let map = $state<MapLibre>();
   let bounds = $state<MapLibreBounds>();
 </script>
@@ -33,9 +33,9 @@
   {#if ready}
     <map-libre bind:this={map}>
       <maplibre-options diff style-url="https://tiles.stadiamaps.com/styles/outdoors.json" zoom={7}>
-        {#if data.flat().length}
+        {#if places.length}
           <maplibre-bounds slot="bounds" bind:this={bounds}>
-            {#each data.flat() as place}
+            {#each places as place}
               <maplibre-position slot="positions" lon={place.position[0]} lat={place.position[1]}>
               </maplibre-position>
             {/each}
@@ -86,7 +86,7 @@
       <!-- places -->
       <maplibre-source id="places" type="geojson">
         <geojson-featurecollection slot="data">
-          {#each data.flat() as place}
+          {#each places as place}
             <geojson-feature slot="features">
               <geojson-point slot="geometry">
                 <geojson-coordinate
@@ -105,10 +105,10 @@
       <!-- routes -->
       <maplibre-source id="routes" type="geojson">
         <geojson-featurecollection slot="data">
-          {#each data.filter((datum): datum is Route => Array.isArray(datum)) as route}
+          {#each routes as route}
             <geojson-feature slot="features">
               <geojson-linestring slot="geometry">
-                {#each route as place}
+                {#each route.places as place}
                   <geojson-coordinate
                     slot="coordinates"
                     lon={place.position[0]}

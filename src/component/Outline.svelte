@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { GeocodingApi, type PeliasGeoJSONFeature } from "@stadiamaps/api";
+  import type { XmlFragment } from "yjs";
+  import { ySyncPlugin, yCursorPlugin, yUndoPlugin, undo, redo } from "y-prosemirror";
   import { schema as basic } from "prosemirror-schema-basic";
   import { EditorState, type EditorStateConfig } from "prosemirror-state";
   import { Node, type NodeSpec, Schema } from "prosemirror-model";
   import { baseKeymap, toggleMark } from "prosemirror-commands";
   import { EditorView } from "prosemirror-view";
-  import { undo, redo, history } from "prosemirror-history";
+  import { history } from "prosemirror-history";
   import { keymap } from "prosemirror-keymap";
   import { addListNodes, liftListItem, sinkListItem, splitListItem } from "prosemirror-schema-list";
   import {
@@ -13,76 +16,60 @@
     smartQuotes,
     emDash,
     ellipsis,
-    undoInputRule,
-    textblockTypeInputRule
+    undoInputRule
   } from "prosemirror-inputrules";
   import "prosemirror-view/style/prosemirror.css";
 
-  import autocomplete from "~/lib/autocomplete";
+  import autocomplete from "~/lib/autocomplete.svelte";
   import focus from "~/lib/focus";
   import linkify from "~/lib/linkify";
-  import "./LocationResults.svelte";
-  import LocationResults from "./LocationResults.svelte";
+  import LocationResults from "~/component/LocationResults.svelte";
   import { center } from "~/store/map.svelte";
 
   interface Props {
-    document: unknown;
-    focus: unknown;
+    document: XmlFragment;
     focused: boolean;
   }
 
-  let { focused, document: _document, focus: _focus } = $props<Props>();
+  let { focused, document } = $props<Props>();
   export function load(doc: any) {
-    try {
-      prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
-      view.updateState(prose);
-      _document = view.state.toJSON().doc;
-    } catch (e) {
-      console.error(`Error loading document`, e);
-    }
+    // try {
+    //   prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
+    //   view.updateState(prose);
+    //   // _document = view.state.toJSON().doc;
+    // } catch (e) {
+    //   console.error(`Error loading document`, e);
+    // }
   }
 
   let el = $state<HTMLElement>();
-  let query = $state("");
 
-  let position = $state({ x: 0, y: 0 });
+  const api = new GeocodingApi();
 
-  const autocompleteTag = "pmac-tag";
-  const {
-    select,
-    addNodes: addAutoCompleteNodes,
-    plugin: autocompletePlugin
-  } = autocomplete({
-    onInput(text, node) {
-      query = text;
-
-      if (!node) return;
-      const bounds = node.getBoundingClientRect();
-      position = { x: bounds.left, y: node.offsetHeight + bounds.top };
-    },
-    toDOM: (node: Node) => [
-      autocompleteTag,
+  const place: NodeSpec = {
+    group: "inline",
+    inline: true,
+    atom: true,
+    selectable: false,
+    draggable: false,
+    attrs: { name: {}, lon: {}, lat: {} },
+    toDOM: node => ["place-tag", node.attrs, "@" + node.attrs.name],
+    parseDOM: [
       {
-        name: node.attrs.name,
-        longitude: node.attrs.data.position[0],
-        latitude: node.attrs.data.position[1]
-      },
-      "@" + node.attrs.text
-    ],
-    parseDOM: {
-      tag: autocompleteTag,
-      getAttrs(dom) {
-        if (typeof dom === "string") return {};
+        tag: "place-tag",
+        getAttrs(dom: string | HTMLElement) {
+          if (typeof dom === "string") return false;
 
-        const lng = Number(dom.getAttribute("longitude")),
-          lat = Number(dom.getAttribute("latitude"));
-        const name = dom.innerText.replace(/^@/, "");
-        const data = { name, position: [lng, lat] };
+          const data: { [key: string]: string } = {};
+          for (const attribute of dom.attributes) {
+            data[attribute.name] = attribute.value;
+          }
 
-        return { text: name, data };
+          return { ...data, name: dom.innerText.replace(/^@/, "") };
+        }
       }
-    }
-  });
+    ]
+  };
 
   const route: NodeSpec = {
     content: "list_item+",
@@ -98,23 +85,40 @@
         }
       }
     ],
-    toDOM(node) {
+    toDOM(_node) {
       return ["ol", { "data-route": "" }, 0];
     }
   };
 
-  const nodes = addAutoCompleteNodes(
-    addListNodes(basic.spec.nodes.append({ route }), "paragraph block*", "block")
+  const nodes = addListNodes(
+    basic.spec.nodes.append({ place, route }),
+    "paragraph block*",
+    "block"
   );
 
   const schema = new Schema({ nodes, marks: basic.spec.marks });
+  const places = autocomplete<PeliasGeoJSONFeature>({
+    inputId: "autocomplete-input",
+    menuId: "autocomplete-results",
+    onInput: text =>
+      text.length >= 3 ? api.autocomplete({ text }).then(res => res.features) : Promise.resolve([]),
+    onAccept: feature => {
+      return schema.nodes.place.create({
+        name: feature.properties?.name,
+        lon: "" + feature.geometry.coordinates[0],
+        lat: "" + feature.geometry.coordinates[1]
+      });
+    }
+  });
 
   const config: EditorStateConfig = {
     schema,
     plugins: [
+      ySyncPlugin(document),
+      yUndoPlugin(),
+      ...places.plugin,
       linkify(),
       focus(),
-      autocompletePlugin,
       history(),
       keymap({
         "Mod-z": undo,
@@ -135,7 +139,6 @@
           ...smartQuotes,
           emDash,
           ellipsis,
-          textblockTypeInputRule(/\@/, schema.nodes.place),
           wrappingInputRule(
             /^(\d+)\.\s$/,
             schema.nodes.ordered_list,
@@ -155,14 +158,14 @@
   $effect(() => {
     if (!el) return;
     view = new EditorView(el, {
-      state: prose,
-      dispatchTransaction(tr) {
-        view.updateState(view.state.apply(tr));
-        _document = view.state.toJSON().doc;
+      state: prose
+      // dispatchTransaction(tr) {
+      //   view.updateState(view.state.apply(tr));
+      //   _document = view.state.toJSON().doc;
 
-        const selected = view.state.selection.$head.node(1);
-        if (selected) _focus = selected.toJSON();
-      }
+      //   const selected = view.state.selection.$head.node(1);
+      //   if (selected) _focus = selected.toJSON();
+      // }
     });
 
     return () => view.destroy();
@@ -170,12 +173,20 @@
 </script>
 
 <div class="outline" class:focused bind:this={el}></div>
-{#if query}
-  <div class="results" style:left={position.x + "px"} style:top={position.y + "px"}>
+
+{#if places.state.open}
+  <div
+    class="results"
+    style:left={places.state.position.x + "px"}
+    style:top={places.state.position.y + "px"}
+  >
     <LocationResults
-      {query}
-      center={$center}
-      onselect={place => select(view, { text: place.name, data: place })}
+      id="autocomplete-results"
+      labelledBy="autocomplete-input"
+      query={places.state.query}
+      results={places.state.results}
+      highlighted={places.state.highlighted}
+      onselect={place => {}}
     />
   </div>
 {/if}
@@ -206,7 +217,7 @@
     margin-inline-start: 1.5em;
   }
 
-  .outline :global(pmac-tag) {
+  .outline :global(place-tag) {
     color: #5c7cfa;
     font-weight: bold;
   }

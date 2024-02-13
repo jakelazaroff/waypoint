@@ -64,7 +64,7 @@ export class MapLibre extends MapLibreBase {
     if (ev.target instanceof MapLibreOptions) this.updateOptions(ev.detail.patches);
     else if (ev.target instanceof MapLibreLayer) this.updateLayer(ev.target, ev.detail.patches);
     else if (ev.target instanceof HTMLImageElement) this.updateImages();
-    else if (ev.target instanceof HTMLSourceElement) this.updateSources();
+    else if (ev.target instanceof MapLibreSource) this.updateSources();
   }
 
   /** @param {import("./json-element.js").Patch[]} patches */

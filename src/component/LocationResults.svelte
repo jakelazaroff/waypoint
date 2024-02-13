@@ -10,7 +10,7 @@
     query: string;
     results: PeliasGeoJSONFeature[];
     highlighted: number;
-    onselect(place: Place): void;
+    onselect(index: number): void;
   }
 
   const { id, labelledBy, query, results, highlighted, onselect } = $props<Props>();
@@ -28,12 +28,14 @@
       aria-activedescendant={results[highlighted]?.properties?.id}
     >
       {#each results as result, i}
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
         <li
           role="option"
           id={result.properties?.id}
           class="result"
           aria-selected={highlighted === i}
           tabindex={-1}
+          on:click={() => onselect(i)}
         >
           <span class="name truncate">{result.properties?.name}</span>
           <span class="blurb truncate">{result.properties?.label}</span>

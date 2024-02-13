@@ -57,32 +57,27 @@ export class MapLibre extends MapLibreBase {
     return this.#map;
   }
 
-  /** @param {import("./json-element.js").JSONChangeEvent} ev */
+  /** @param {import("./jsonelement.js").JSONChangeEvent} ev */
   handleEvent(ev) {
-    if (!this.#loaded) return;
-
     if (ev.target instanceof MapLibreOptions) this.updateOptions(ev.detail.patches);
     else if (ev.target instanceof MapLibreLayer) this.updateLayer(ev.target, ev.detail.patches);
     else if (ev.target instanceof HTMLImageElement) this.updateImages();
     else if (ev.target instanceof MapLibreSource) this.updateSources();
   }
 
-  /** @param {import("./json-element.js").Patch[]} patches */
+  /** @param {import("./jsonelement.js").Patch[]} patches */
   updateOptions(patches = []) {
-    const [el] = this.slotted(MapLibreOptions);
-    const options = el.json;
-
-    const regex = /^\/(.+?)\//;
-    for (const { path } of patches) {
-      const [, key] = path.match(regex) || [];
+    for (const { path, value } of patches) {
+      const [, key] = path.split("/");
       switch (key) {
         case "bounds":
-          if (options.bounds) this.map.fitBounds(options.bounds);
+          this.map.fitBounds(value);
+          break;
         case "style-src":
-          if (options["style-src"]) this.map.setStyle(options["style-src"]);
+          this.map.setStyle(value);
           break;
         case "zoom":
-          if (options.zoom) this.map.setZoom(options.zoom);
+          this.map.setZoom(value);
           break;
       }
     }
@@ -98,9 +93,11 @@ export class MapLibre extends MapLibreBase {
 
   /**
    * @param {MapLibreLayer} el
-   * @param {import("./json-element.js").Patch[]} patches
+   * @param {import("./jsonelement.js").Patch[]} patches
    */
   updateLayer(el, patches = []) {
+    if (!this.#loaded) return;
+
     // create the layer if it doesn't exist
     const layer = this.map.getLayer(el.id);
     if (!layer) this.map.addLayer(el.json);
@@ -117,6 +114,8 @@ export class MapLibre extends MapLibreBase {
   }
 
   updateSources() {
+    if (!this.#loaded) return;
+
     // get a list of all sources
     const sources = this.slotted(MapLibreSource).map(el => el.json);
 
@@ -131,6 +130,8 @@ export class MapLibre extends MapLibreBase {
   }
 
   updateImages() {
+    if (!this.#loaded) return;
+
     const images = this.slotted(HTMLImageElement);
 
     for (const img of images) {
@@ -145,7 +146,7 @@ export class MapLibre extends MapLibreBase {
     if (!(container instanceof HTMLElement)) return;
 
     const [options] = this.slotted(MapLibreOptions);
-    this.#map = new maplibre.Map({ container, ...options.json });
+    this.#map = new maplibre.Map({ ...options.json, container });
 
     this.map.once("load", () => {
       this.#loaded = true;

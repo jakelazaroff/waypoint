@@ -9,15 +9,23 @@
   import Toggle from "~/component/Toggle.svelte";
   import Button from "~/component/Button.svelte";
 
-  const ydoc = new Y.Doc();
-  const fragment = ydoc.getXmlFragment("outline");
-  new IndexeddbPersistence("y-indexeddb", ydoc);
+  let ydoc = $state(new Y.Doc());
+  let db: IndexeddbPersistence;
+  let fragment = $derived(ydoc.getXmlFragment("outline"));
 
+  // svelte-ignore static-state-reference
   let doc = $state(fragment.toDOM());
-  ydoc.on("update", () => (doc = fragment.toDOM()));
+  let places = $derived(getPlaces(doc as DocumentFragment));
+  let routes = $derived(getRoutes(doc as DocumentFragment));
 
-  let places = $derived(doc instanceof DocumentFragment ? getPlaces(doc) : []);
-  let routes = $derived(getRoutes(doc));
+  $effect(() => {
+    db = new IndexeddbPersistence("travel", ydoc);
+    const update = () => (doc = fragment.toDOM() as DocumentFragment);
+    update();
+
+    ydoc.on("update", update);
+    return () => ydoc.off("update", update);
+  });
 
   function getPlaces(root: DocumentFragment | Element): Place[] {
     const places: Place[] = [];
@@ -34,20 +42,39 @@
     return places;
   }
 
-  function getRoutes(root: Node): Route[] {
-    if (root instanceof Element && root.tagName === "ROUTE") {
+  function getRoutes(root: DocumentFragment | Element): Route[] {
+    const results: Route[] = [];
+    const routes = root.querySelectorAll("route");
+
+    for (const route of routes) {
+      const result: Route = { type: "route", places: [] };
+      results.push(result);
+
+      const places = route.querySelectorAll("place");
+
+      for (const place of places) {
+        let current = place.parentElement;
+
+        while (current !== route.parentElement && current !== null) {
+          if (new Set(["ROUTE", "ORDERED_LIST", "BULLET_LIST"]).has(current.tagName)) break;
+          current = current.parentElement;
+        }
+
+        if (current !== route) continue;
+
+        const name = place.getAttribute("name");
+        const lon = Number(place.getAttribute("lon"));
+        const lat = Number(place.getAttribute("lat"));
+
+        if (!name || Number.isNaN(lon) || Number.isNaN(lat)) continue;
+        result.places.push({ type: "place", name, position: [lon, lat] });
+      }
     }
 
-    for (const child of root.childNodes) {
-      getRoutes(child);
-    }
-
-    return [];
+    return results;
   }
 
-  // let doc = $state<any>({});
   let focused = $state(false);
-  let outline = $state<Outline>();
 </script>
 
 <svelte:head>
@@ -59,30 +86,34 @@
     <div class="toolbar">
       <Button
         onclick={() => {
-          // const filename = prompt("Enter a filename");
-          // if (!filename) return;
-          // const a = document.createElement("a");
-          // const file = new Blob([JSON.stringify(doc)], { type: "application/json" });
-          // a.href = URL.createObjectURL(file);
-          // a.download = `${filename}.json`;
-          // a.click();
+          const filename = prompt("Enter a filename");
+          if (!filename) return;
+          const a = document.createElement("a");
+          const file = new Blob([Y.encodeStateAsUpdate(ydoc)]);
+          a.href = URL.createObjectURL(file);
+          a.download = `${filename}.travel`;
+          a.click();
         }}
       >
         <Icon name="save" />
         <span class="label">Save</span>
       </Button>
       <Button
-        onclick={() => {
-          // const input = document.createElement("input");
-          // input.type = "file";
-          // input.onchange = async () => {
-          //   const file = input.files?.[0];
-          //   if (!file) return;
-          //   const json = await file.text();
-          //   const doc = JSON.parse(json);
-          //   outline?.load(doc);
-          // };
-          // input.click();
+        onclick={async () => {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.onchange = async () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            const state = await file.arrayBuffer();
+
+            ydoc.destroy();
+
+            // create new document
+            ydoc = new Y.Doc();
+            Y.applyUpdate(ydoc, new Uint8Array(state));
+          };
+          input.click();
         }}
       >
         <Icon name="open" />
@@ -94,7 +125,7 @@
         </Toggle>
       </div>
     </div>
-    <Outline bind:this={outline} document={fragment} bind:focused />
+    <Outline document={fragment} bind:focused />
   </div>
   <Map {places} {routes} />
 </div>

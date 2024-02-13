@@ -1,10 +1,10 @@
 <script lang="ts">
   import { GeocodingApi, type PeliasGeoJSONFeature } from "@stadiamaps/api";
   import type { XmlFragment } from "yjs";
-  import { ySyncPlugin, yCursorPlugin, yUndoPlugin, undo, redo } from "y-prosemirror";
+  import { ySyncPlugin, yUndoPlugin, undo, redo } from "y-prosemirror";
   import { schema as basic } from "prosemirror-schema-basic";
   import { EditorState, type EditorStateConfig } from "prosemirror-state";
-  import { Node, type NodeSpec, Schema } from "prosemirror-model";
+  import { type NodeSpec, Schema } from "prosemirror-model";
   import { baseKeymap, toggleMark } from "prosemirror-commands";
   import { EditorView } from "prosemirror-view";
   import { history } from "prosemirror-history";
@@ -32,15 +32,6 @@
   }
 
   let { focused, document } = $props<Props>();
-  export function load(doc: any) {
-    // try {
-    //   prose = EditorState.create({ ...config, doc: Node.fromJSON(schema, doc) });
-    //   view.updateState(prose);
-    //   // _document = view.state.toJSON().doc;
-    // } catch (e) {
-    //   console.error(`Error loading document`, e);
-    // }
-  }
 
   let el = $state<HTMLElement>();
 
@@ -111,7 +102,7 @@
     }
   });
 
-  const config: EditorStateConfig = {
+  let config: EditorStateConfig = $derived({
     schema,
     plugins: [
       ySyncPlugin(document),
@@ -150,9 +141,9 @@
         ]
       })
     ]
-  };
+  });
 
-  let prose = $state(EditorState.create(config));
+  let prose = $derived(EditorState.create(config));
   let view = $state<EditorView>()!!!;
 
   $effect(() => {
@@ -186,7 +177,7 @@
       query={places.state.query}
       results={places.state.results}
       highlighted={places.state.highlighted}
-      onselect={place => {}}
+      onselect={places.select}
     />
   </div>
 {/if}

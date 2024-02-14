@@ -67,11 +67,14 @@ export class MapLibre extends MapLibreBase {
 
   /** @param {import("./jsonelement.js").Patch[]} patches */
   updateOptions(patches = []) {
+    const [options] = this.slotted(MapLibreOptions);
+
     for (const { path, value } of patches) {
       const [, key] = path.split("/");
       switch (key) {
         case "bounds":
-          this.map.fitBounds(value);
+          const bounds = options.json.bounds;
+          if (bounds) this.map.fitBounds(bounds);
           break;
         case "style-src":
           this.map.setStyle(value);

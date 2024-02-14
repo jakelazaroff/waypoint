@@ -10,21 +10,43 @@
   import Button from "~/component/Button.svelte";
 
   let ydoc = $state(new Y.Doc());
-  let db: IndexeddbPersistence;
   let fragment = $derived(ydoc.getXmlFragment("outline"));
 
+  const isElement = (node: DocumentFragment | Element): node is Element =>
+    node.nodeType === Node.ELEMENT_NODE;
+
+  function parents(type: Y.AbstractType<unknown>, depth: number) {
+    const ancestors: Y.AbstractType<unknown>[] = [];
+
+    let current = type;
+    while (current.parent) {
+      ancestors.push(current);
+      current = current.parent;
+    }
+
+    return ancestors.at(depth);
+  }
+
   // svelte-ignore static-state-reference
-  let doc = $state(fragment.toDOM());
-  let places = $derived(getPlaces(doc as DocumentFragment));
-  let routes = $derived(getRoutes(doc as DocumentFragment));
+  let doc = $state(fragment.toDOM() as DocumentFragment);
+  let cursor = $state<Y.AbsolutePosition>();
+  let focused = $state(false);
+  let focus = $derived.call(() => {
+    if (!focused || !cursor) return doc;
+    const root = parents(cursor.type, -1);
+    if (!(root instanceof Y.XmlFragment)) return doc;
+
+    return root.toDOM() as DocumentFragment;
+  });
+  let places = $derived(getPlaces(focus));
+  let routes = $derived(getRoutes(focus));
 
   $effect(() => {
-    db = new IndexeddbPersistence("travel", ydoc);
-    const update = () => (doc = fragment.toDOM() as DocumentFragment);
-    update();
+    // persist doc to indexeddb
+    new IndexeddbPersistence("travel", ydoc);
 
-    ydoc.on("update", update);
-    return () => ydoc.off("update", update);
+    ydoc.on("update", () => (doc = fragment.toDOM() as DocumentFragment));
+    return () => ydoc.destroy();
   });
 
   function getPlaces(root: DocumentFragment | Element): Place[] {
@@ -44,11 +66,10 @@
 
   function getRoutes(root: DocumentFragment | Element): Route[] {
     const results: Route[] = [];
-    const routes = root.querySelectorAll("route");
 
+    const routes = isElement(root) ? [root] : root.querySelectorAll("route");
     for (const route of routes) {
       const result: Route = { type: "route", places: [] };
-      results.push(result);
 
       const places = route.querySelectorAll("place");
 
@@ -69,12 +90,12 @@
         if (!name || Number.isNaN(lon) || Number.isNaN(lat)) continue;
         result.places.push({ type: "place", name, position: [lon, lat] });
       }
+
+      if (result.places.length) results.push(result);
     }
 
     return results;
   }
-
-  let focused = $state(false);
 </script>
 
 <svelte:head>
@@ -125,7 +146,7 @@
         </Toggle>
       </div>
     </div>
-    <Outline document={fragment} bind:focused />
+    <Outline document={fragment} bind:focused onmovecursor={pos => (cursor = pos)} />
   </div>
   <Map {places} {routes} />
 </div>

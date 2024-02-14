@@ -1,7 +1,18 @@
 <script lang="ts">
   import { GeocodingApi, type PeliasGeoJSONFeature } from "@stadiamaps/api";
-  import type { XmlFragment } from "yjs";
-  import { ySyncPlugin, yUndoPlugin, undo, redo } from "y-prosemirror";
+  import {
+    AbsolutePosition,
+    AbstractType,
+    createAbsolutePositionFromRelativePosition,
+    type XmlFragment
+  } from "yjs";
+  import {
+    ySyncPlugin,
+    yUndoPlugin,
+    undo,
+    redo,
+    absolutePositionToRelativePosition
+  } from "y-prosemirror";
   import { schema as basic } from "prosemirror-schema-basic";
   import { EditorState, type EditorStateConfig } from "prosemirror-state";
   import { type NodeSpec, Schema } from "prosemirror-model";
@@ -29,9 +40,10 @@
   interface Props {
     document: XmlFragment;
     focused: boolean;
+    onmovecursor?(pos?: AbsolutePosition): void;
   }
 
-  let { focused, document } = $props<Props>();
+  let { focused, document, onmovecursor = () => {} } = $props<Props>();
 
   let el = $state<HTMLElement>();
 
@@ -102,10 +114,11 @@
     }
   });
 
+  const ysync = ySyncPlugin(document);
   let config: EditorStateConfig = $derived({
     schema,
     plugins: [
-      ySyncPlugin(document),
+      ysync,
       yUndoPlugin(),
       ...places.plugin,
       linkify(),
@@ -149,14 +162,20 @@
   $effect(() => {
     if (!el) return;
     view = new EditorView(el, {
-      state: prose
-      // dispatchTransaction(tr) {
-      //   view.updateState(view.state.apply(tr));
-      //   _document = view.state.toJSON().doc;
+      state: prose,
+      dispatchTransaction(tr) {
+        view.updateState(view.state.apply(tr));
 
-      //   const selected = view.state.selection.$head.node(1);
-      //   if (selected) _focus = selected.toJSON();
-      // }
+        const ystate = ysync.getState(view.state);
+        const rel = absolutePositionToRelativePosition(
+          view.state.selection.$head.pos,
+          document,
+          ystate.binding?.mapping
+        );
+
+        const abs = createAbsolutePositionFromRelativePosition(rel, document.doc!!!);
+        onmovecursor(abs ?? undefined);
+      }
     });
 
     return () => view.destroy();

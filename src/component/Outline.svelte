@@ -1,11 +1,6 @@
 <script lang="ts">
   import { GeocodingApi, type PeliasGeoJSONFeature } from "@stadiamaps/api";
-  import {
-    AbsolutePosition,
-    AbstractType,
-    createAbsolutePositionFromRelativePosition,
-    type XmlFragment
-  } from "yjs";
+  import { RelativePosition, type XmlFragment } from "yjs";
   import {
     ySyncPlugin,
     yUndoPlugin,
@@ -14,7 +9,7 @@
     absolutePositionToRelativePosition
   } from "y-prosemirror";
   import { schema as basic } from "prosemirror-schema-basic";
-  import { EditorState, type EditorStateConfig } from "prosemirror-state";
+  import { EditorState } from "prosemirror-state";
   import { type NodeSpec, Schema } from "prosemirror-model";
   import { baseKeymap, toggleMark } from "prosemirror-commands";
   import { EditorView } from "prosemirror-view";
@@ -35,12 +30,11 @@
   import focus from "~/lib/focus";
   import linkify from "~/lib/linkify";
   import LocationResults from "~/component/LocationResults.svelte";
-  import { center } from "~/store/map.svelte";
 
   interface Props {
     document: XmlFragment;
     focused: boolean;
-    onmovecursor?(pos?: AbsolutePosition): void;
+    onmovecursor?(pos?: RelativePosition): void;
   }
 
   let { focused, document, onmovecursor = () => {} } = $props<Props>();
@@ -114,49 +108,49 @@
     }
   });
 
-  const ysync = ySyncPlugin(document);
-  let config: EditorStateConfig = $derived({
-    schema,
-    plugins: [
-      ysync,
-      yUndoPlugin(),
-      ...places.plugin,
-      linkify(),
-      focus(),
-      history(),
-      keymap({
-        "Mod-z": undo,
-        "Mod-y": redo,
-        "Mod-b": toggleMark(schema.marks.strong),
-        "Mod-i": toggleMark(schema.marks.em),
-        "Mod-d": () => (focused = !focused) || true,
-        "Backspace": undoInputRule,
-        "Enter": splitListItem(schema.nodes.list_item),
-        "Mod-]": sinkListItem(schema.nodes.list_item),
-        "Tab": sinkListItem(schema.nodes.list_item),
-        "Mod-[": liftListItem(schema.nodes.list_item),
-        "Shift+Tab": liftListItem(schema.nodes.list_item)
-      }),
-      keymap(baseKeymap),
-      inputRules({
-        rules: [
-          ...smartQuotes,
-          emDash,
-          ellipsis,
-          wrappingInputRule(
-            /^(\d+)\.\s$/,
-            schema.nodes.ordered_list,
-            match => ({ order: +match[1] }),
-            (match, node) => node.childCount + node.attrs.order == +match[1]
-          ),
-          wrappingInputRule(/^\s*([-+*])\s$/, schema.nodes.bullet_list),
-          wrappingInputRule(/^\s*(~)\s$/, schema.nodes.route)
-        ]
-      })
-    ]
-  });
-
-  let prose = $derived(EditorState.create(config));
+  let ysync = $derived(ySyncPlugin(document));
+  let prose = $derived(
+    EditorState.create({
+      schema,
+      plugins: [
+        ysync,
+        yUndoPlugin(),
+        ...places.plugin,
+        linkify(),
+        focus(),
+        history(),
+        keymap({
+          "Mod-z": undo,
+          "Mod-y": redo,
+          "Mod-b": toggleMark(schema.marks.strong),
+          "Mod-i": toggleMark(schema.marks.em),
+          "Mod-d": () => (focused = !focused) || true,
+          "Backspace": undoInputRule,
+          "Enter": splitListItem(schema.nodes.list_item),
+          "Mod-]": sinkListItem(schema.nodes.list_item),
+          "Tab": sinkListItem(schema.nodes.list_item),
+          "Mod-[": liftListItem(schema.nodes.list_item),
+          "Shift+Tab": liftListItem(schema.nodes.list_item)
+        }),
+        keymap(baseKeymap),
+        inputRules({
+          rules: [
+            ...smartQuotes,
+            emDash,
+            ellipsis,
+            wrappingInputRule(
+              /^(\d+)\.\s$/,
+              schema.nodes.ordered_list,
+              match => ({ order: +match[1] }),
+              (match, node) => node.childCount + node.attrs.order == +match[1]
+            ),
+            wrappingInputRule(/^\s*([-+*])\s$/, schema.nodes.bullet_list),
+            wrappingInputRule(/^\s*(~)\s$/, schema.nodes.route)
+          ]
+        })
+      ]
+    })
+  );
   let view = $state<EditorView>()!!!;
 
   $effect(() => {
@@ -167,14 +161,15 @@
         view.updateState(view.state.apply(tr));
 
         const ystate = ysync.getState(view.state);
-        const rel = absolutePositionToRelativePosition(
+        if (!ystate.binding) return;
+
+        const rel: RelativePosition = absolutePositionToRelativePosition(
           view.state.selection.$head.pos,
           document,
           ystate.binding?.mapping
         );
 
-        const abs = createAbsolutePositionFromRelativePosition(rel, document.doc!!!);
-        onmovecursor(abs ?? undefined);
+        onmovecursor(rel);
       }
     });
 

@@ -1,101 +1,41 @@
 <script lang="ts">
-  import * as Y from "yjs";
+  import type { RelativePosition } from "yjs";
   import { IndexeddbPersistence } from "y-indexeddb";
   import "~/style/style.css";
   import Map from "~/component/Map.svelte";
   import Outline from "~/component/Outline.svelte";
   import Icon from "~/component/Icon.svelte";
-  import { type Place, type Route } from "~/lib/place";
   import Toggle from "~/component/Toggle.svelte";
   import Button from "~/component/Button.svelte";
+  import Doc from "~/lib/doc.svelte";
+  import { download, open } from "~/lib/file";
 
-  let ydoc = $state(new Y.Doc());
-  let fragment = $derived(ydoc.getXmlFragment("outline"));
-
-  const isElement = (node: DocumentFragment | Element): node is Element =>
-    node.nodeType === Node.ELEMENT_NODE;
-
-  function parents(type: Y.AbstractType<unknown>, depth: number) {
-    const ancestors: Y.AbstractType<unknown>[] = [];
-
-    let current = type;
-    while (current.parent) {
-      ancestors.push(current);
-      current = current.parent;
-    }
-
-    return ancestors.at(depth);
-  }
-
-  // svelte-ignore static-state-reference
-  let doc = $state(fragment.toDOM() as DocumentFragment);
-  let cursor = $state<Y.AbsolutePosition>();
+  let doc = $state(new Doc());
+  let cursor = $state<RelativePosition>();
   let focused = $state(false);
-  let focus = $derived.call(() => {
-    if (!focused || !cursor) return doc;
-    const root = parents(cursor.type, -1);
-    if (!(root instanceof Y.XmlFragment)) return doc;
 
-    return root.toDOM() as DocumentFragment;
-  });
-  let places = $derived(getPlaces(focus));
-  let routes = $derived(getRoutes(focus));
+  let places = $derived(doc.places(focused ? cursor : undefined));
+  let routes = $derived(doc.routes(focused ? cursor : undefined));
 
   $effect(() => {
-    // persist doc to indexeddb
-    new IndexeddbPersistence("travel", ydoc);
-
-    ydoc.on("update", () => (doc = fragment.toDOM() as DocumentFragment));
-    return () => ydoc.destroy();
+    // console.log(ydoc.guid, localStorage.getItem("last_opened"));
+    // // persist doc to indexeddb
+    // new IndexeddbPersistence(localStorage.getItem("last_opened") || ydoc.guid, ydoc);
+    // localStorage.setItem("last_opened", ydoc.guid);
+    // ydoc.on("update", () => {
+    //   outline = undefined;
+    //   outline = ydoc.getXmlFragment("outline");
+    //   // for (const place of outline.querySelectorAll("place")) {
+    //   //   if (!(place instanceof Y.XmlElement)) continue;
+    //   //   console.log(
+    //   //     place.getAttribute("name"),
+    //   //     place.getAttribute("lon"),
+    //   //     place.getAttribute("lat")
+    //   //   );
+    //   // }
+    // });
+    // return () => ydoc.destroy();
   });
-
-  function getPlaces(root: DocumentFragment | Element): Place[] {
-    const places: Place[] = [];
-
-    for (const el of root.querySelectorAll("place")) {
-      const name = el.getAttribute("name");
-      const lon = Number(el.getAttribute("lon"));
-      const lat = Number(el.getAttribute("lat"));
-
-      if (!name || Number.isNaN(lon) || Number.isNaN(lat)) continue;
-      places.push({ type: "place", name, position: [lon, lat] });
-    }
-
-    return places;
-  }
-
-  function getRoutes(root: DocumentFragment | Element): Route[] {
-    const results: Route[] = [];
-
-    const routes = isElement(root) ? [root] : root.querySelectorAll("route");
-    for (const route of routes) {
-      const result: Route = { type: "route", places: [] };
-
-      const places = route.querySelectorAll("place");
-
-      for (const place of places) {
-        let current = place.parentElement;
-
-        while (current !== route.parentElement && current !== null) {
-          if (new Set(["ROUTE", "ORDERED_LIST", "BULLET_LIST"]).has(current.tagName)) break;
-          current = current.parentElement;
-        }
-
-        if (current !== route) continue;
-
-        const name = place.getAttribute("name");
-        const lon = Number(place.getAttribute("lon"));
-        const lat = Number(place.getAttribute("lat"));
-
-        if (!name || Number.isNaN(lon) || Number.isNaN(lat)) continue;
-        result.places.push({ type: "place", name, position: [lon, lat] });
-      }
-
-      if (result.places.length) results.push(result);
-    }
-
-    return results;
-  }
 </script>
 
 <svelte:head>
@@ -107,13 +47,11 @@
     <div class="toolbar">
       <Button
         onclick={() => {
-          const filename = prompt("Enter a filename");
-          if (!filename) return;
-          const a = document.createElement("a");
-          const file = new Blob([Y.encodeStateAsUpdate(ydoc)]);
-          a.href = URL.createObjectURL(file);
-          a.download = `${filename}.travel`;
-          a.click();
+          const name = prompt("Enter a file name");
+          if (!name) return;
+
+          const file = doc.serialize(`${name}.travel`);
+          download(file);
         }}
       >
         <Icon name="save" />
@@ -121,20 +59,9 @@
       </Button>
       <Button
         onclick={async () => {
-          const input = document.createElement("input");
-          input.type = "file";
-          input.onchange = async () => {
-            const file = input.files?.[0];
-            if (!file) return;
-            const state = await file.arrayBuffer();
-
-            ydoc.destroy();
-
-            // create new document
-            ydoc = new Y.Doc();
-            Y.applyUpdate(ydoc, new Uint8Array(state));
-          };
-          input.click();
+          const [file] = await open();
+          const state = new Uint8Array(await file.arrayBuffer());
+          doc = Doc.parse(state);
         }}
       >
         <Icon name="open" />
@@ -146,7 +73,7 @@
         </Toggle>
       </div>
     </div>
-    <Outline document={fragment} bind:focused onmovecursor={pos => (cursor = pos)} />
+    <Outline document={doc.outline} bind:focused onmovecursor={pos => void (cursor = pos)} />
   </div>
   <Map {places} {routes} />
 </div>

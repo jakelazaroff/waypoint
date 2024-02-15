@@ -14,6 +14,12 @@ dependencies:
   '@sveltejs/adapter-auto':
     specifier: ^3.1.1
     version: 3.1.1(@sveltejs/kit@2.5.0)
+  '@y-sweet/client':
+    specifier: ^0.1.0
+    version: 0.1.0(yjs@13.6.12)
+  '@y-sweet/sdk':
+    specifier: ^0.1.0
+    version: 0.1.0
   maplibre-gl:
     specifier: ^4.0.0
     version: 4.0.0
@@ -94,6 +100,9 @@ devDependencies:
   vite:
     specifier: ^5.0.3
     version: 5.0.12(@types/node@20.11.13)
+  y-sweet:
+    specifier: ^0.1.0
+    version: 0.1.0
 
 packages:
 
@@ -775,6 +784,22 @@ packages:
     resolution: {integrity: sha512-2WALfTl4xo2SkGCYRt6rDTFfk9R1czmBvUQy12gK2KuRKIpWEhcbbzy8EZXtz/jkRqHX8bFEc6FC1HjX4TUWYw==}
     engines: {node: '>=10.0.0'}
     dev: true
+
+  /@y-sweet/client@0.1.0(yjs@13.6.12):
+    resolution: {integrity: sha512-X9+IZ/7t7So39TxYxmmjKKZ8SCKcFJrBmnEHHEJ9l6Jj6hPfoK8uHzQiYN+R0J5CpEoGsxuPevwAQZzENYX0dQ==}
+    peerDependencies:
+      yjs: ^13.0.0
+    dependencies:
+      '@y-sweet/sdk': 0.1.0
+      y-protocols: 1.0.6(yjs@13.6.12)
+      yjs: 13.6.12
+    dev: false
+
+  /@y-sweet/sdk@0.1.0:
+    resolution: {integrity: sha512-rQDF3p3KhRVPBRpT9e8fNq0qyQlHe/LF3IfrkP3m/PjUmtTkMY/a3x1/vdRn1KXLz3tB5h7iP7KRPDP7bEs2qw==}
+    dependencies:
+      '@types/node': 20.11.13
+    dev: false
 
   /acorn-typescript@1.4.13(acorn@8.11.3):
     resolution: {integrity: sha512-xsc9Xv0xlVfwp2o7sQ+GCQ1PgbkdcpWdTzrwXxO3xDMTAywVS3oXVOcOHuRjAPkS4P9b+yc/qNF15460v+jp4Q==}
@@ -2383,6 +2408,12 @@ packages:
       lib0: 0.2.88
       yjs: 13.6.12
     dev: false
+
+  /y-sweet@0.1.0:
+    resolution: {integrity: sha512-45+EQQBMrDp9W5RS89HYqgX3B6W168i1O6otzEp68NrZ/OqiEjcMo1EdCAclaFM38Pcpu67gL/jrVRq5vD4gtQ==}
+    hasBin: true
+    requiresBuild: true
+    dev: true
 
   /y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}

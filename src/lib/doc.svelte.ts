@@ -10,23 +10,27 @@ import {
 import type { Place, Route } from "./place";
 
 export default class Doc {
-  #ydoc = $state(new YDoc());
-  outline = $derived(this.#ydoc.getXmlFragment("outline"));
+  ydoc = $state(new YDoc());
+  get guid() {
+    return this.ydoc.guid;
+  }
+
+  outline = $derived(this.ydoc.getXmlFragment("outline"));
 
   constructor(ydoc = new YDoc()) {
-    this.#ydoc = ydoc;
+    this.ydoc = ydoc;
 
     // HACK places: the yjs doc is mutated internally, so we need to manually invalidate the reactive variable
     this.#invalidateOutline();
-    this.#ydoc.on("update", () => this.#invalidateOutline());
+    this.ydoc.on("update", () => this.#invalidateOutline());
   }
 
   // HACK places: the yjs doc is mutated internally, so we need to manually invalidate the reactive variable
-  #outline = $state(this.#ydoc.getXmlFragment("outline"));
+  #outline = $state(this.ydoc.getXmlFragment("outline"));
   #invalidateOutline() {
     // @ts-expect-error
     this.#outline = undefined;
-    this.#outline = this.#ydoc.getXmlFragment("outline");
+    this.#outline = this.ydoc.getXmlFragment("outline");
   }
 
   /** Given a relative position, return the highest ancestor element below the root */
@@ -34,7 +38,7 @@ export default class Doc {
     if (!pos) return this.#outline;
 
     // get the corresponding absolute position
-    const abs = createAbsolutePositionFromRelativePosition(pos, this.#ydoc);
+    const abs = createAbsolutePositionFromRelativePosition(pos, this.ydoc);
     if (!abs) return this.#outline;
 
     const ancestors: AbstractType<unknown>[] = [];
@@ -79,7 +83,9 @@ export default class Doc {
 
     const results: Route[] = [];
 
-    const routes = root instanceof XmlElement ? [root] : root.querySelectorAll("route");
+    let routes = root.querySelectorAll("route");
+    if (root instanceof XmlElement && root.nodeName === "route") routes = [root];
+
     for (const route of routes) {
       if (!(route instanceof XmlElement)) continue;
 
@@ -118,7 +124,11 @@ export default class Doc {
   }
 
   serialize(filename: string) {
-    return new File([encodeStateAsUpdate(this.#ydoc)], filename);
+    return new File([encodeStateAsUpdate(this.ydoc)], filename);
+  }
+
+  static create(guid: string) {
+    return new Doc(new YDoc({ guid }));
   }
 
   static parse(data: Uint8Array) {

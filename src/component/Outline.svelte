@@ -1,13 +1,7 @@
 <script lang="ts">
   import { GeocodingApi, type PeliasGeoJSONFeature } from "@stadiamaps/api";
-  import { RelativePosition, type XmlFragment } from "yjs";
-  import {
-    ySyncPlugin,
-    yUndoPlugin,
-    undo,
-    redo,
-    absolutePositionToRelativePosition
-  } from "y-prosemirror";
+  import { type XmlFragment } from "yjs";
+  import { ySyncPlugin, yUndoPlugin, undo, redo, yCursorPlugin } from "y-prosemirror";
   import { schema as basic } from "prosemirror-schema-basic";
   import { EditorState } from "prosemirror-state";
   import { type NodeSpec, Schema } from "prosemirror-model";
@@ -30,14 +24,15 @@
   import focus from "~/lib/focus";
   import linkify from "~/lib/linkify";
   import LocationResults from "~/component/LocationResults.svelte";
+  import type Collab from "~/lib/collab.svelte";
 
   interface Props {
     document: XmlFragment;
+    collab: Collab;
     focused: boolean;
-    onmovecursor?(pos?: RelativePosition): void;
   }
 
-  let { focused, document, onmovecursor = () => {} } = $props<Props>();
+  let { collab, focused, document } = $props<Props>();
 
   let el = $state<HTMLElement>();
 
@@ -108,71 +103,54 @@
     }
   });
 
-  let ysync = $derived(ySyncPlugin(document));
-  let prose = $derived(
-    EditorState.create({
-      schema,
-      plugins: [
-        ysync,
-        yUndoPlugin(),
-        ...places.plugin,
-        linkify(),
-        focus(),
-        history(),
-        keymap({
-          "Mod-z": undo,
-          "Mod-y": redo,
-          "Mod-b": toggleMark(schema.marks.strong),
-          "Mod-i": toggleMark(schema.marks.em),
-          "Mod-d": () => (focused = !focused) || true,
-          "Backspace": undoInputRule,
-          "Enter": splitListItem(schema.nodes.list_item),
-          "Mod-]": sinkListItem(schema.nodes.list_item),
-          "Tab": sinkListItem(schema.nodes.list_item),
-          "Mod-[": liftListItem(schema.nodes.list_item),
-          "Shift+Tab": liftListItem(schema.nodes.list_item)
-        }),
-        keymap(baseKeymap),
-        inputRules({
-          rules: [
-            ...smartQuotes,
-            emDash,
-            ellipsis,
-            wrappingInputRule(
-              /^(\d+)\.\s$/,
-              schema.nodes.ordered_list,
-              match => ({ order: +match[1] }),
-              (match, node) => node.childCount + node.attrs.order == +match[1]
-            ),
-            wrappingInputRule(/^\s*([-+*])\s$/, schema.nodes.bullet_list),
-            wrappingInputRule(/^\s*(~)\s$/, schema.nodes.route)
-          ]
-        })
-      ]
-    })
-  );
   let view = $state<EditorView>()!!!;
 
   $effect(() => {
     if (!el) return;
+
     view = new EditorView(el, {
-      state: prose,
-      dispatchTransaction(tr) {
-        view.updateState(view.state.apply(tr));
-
-        const ystate = ysync.getState(view.state);
-        if (!ystate.binding) return;
-
-        const rel: RelativePosition = absolutePositionToRelativePosition(
-          view.state.selection.$head.pos,
-          document,
-          ystate.binding?.mapping
-        );
-
-        onmovecursor(rel);
-      }
+      state: EditorState.create({
+        schema,
+        plugins: [
+          ySyncPlugin(document),
+          yCursorPlugin(collab.awareness),
+          yUndoPlugin(),
+          ...places.plugin,
+          linkify(),
+          focus(),
+          history(),
+          keymap({
+            "Mod-z": undo,
+            "Mod-y": redo,
+            "Mod-b": toggleMark(schema.marks.strong),
+            "Mod-i": toggleMark(schema.marks.em),
+            "Mod-d": () => (focused = !focused) || true,
+            "Backspace": undoInputRule,
+            "Enter": splitListItem(schema.nodes.list_item),
+            "Mod-]": sinkListItem(schema.nodes.list_item),
+            "Tab": sinkListItem(schema.nodes.list_item),
+            "Mod-[": liftListItem(schema.nodes.list_item),
+            "Shift+Tab": liftListItem(schema.nodes.list_item)
+          }),
+          keymap(baseKeymap),
+          inputRules({
+            rules: [
+              ...smartQuotes,
+              emDash,
+              ellipsis,
+              wrappingInputRule(
+                /^(\d+)\.\s$/,
+                schema.nodes.ordered_list,
+                match => ({ order: +match[1] }),
+                (match, node) => node.childCount + node.attrs.order == +match[1]
+              ),
+              wrappingInputRule(/^\s*([-+*])\s$/, schema.nodes.bullet_list),
+              wrappingInputRule(/^\s*(~)\s$/, schema.nodes.route)
+            ]
+          })
+        ]
+      })
     });
-
     return () => view.destroy();
   });
 </script>
@@ -230,5 +208,48 @@
   .results {
     position: fixed;
     z-index: 99999999;
+  }
+
+  :global(.ProseMirror-yjs-cursor) {
+    position: relative;
+    margin-left: -1px;
+    margin-right: -1px;
+    border-left: 1px solid;
+    border-right: 1px solid;
+    word-break: normal;
+    border-radius: 1px;
+  }
+
+  :global(.ProseMirror-yjs-cursor)::after {
+    content: "";
+    display: block;
+    position: absolute;
+    width: 4px;
+    left: -2px;
+    top: 0;
+    height: 100%;
+  }
+
+  :global(.ProseMirror-yjs-cursor) > :global(div) {
+    position: absolute;
+    top: -1.05em;
+    left: -1px;
+    font-size: 0.75rem;
+    background-color: black;
+    border-radius: 2px;
+    font-style: normal;
+    font-weight: bold;
+    line-height: normal;
+    user-select: none;
+    color: white;
+    padding: 0 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  :global(.ProseMirror-yjs-cursor):hover > :global(div) {
+    opacity: 1;
   }
 </style>

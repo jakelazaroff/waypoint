@@ -26,6 +26,7 @@
     "tslib": "^2.4.1",
     "typescript": "^5.0.0",
     "vite": "^5.0.3",
+    "wrangler": "^3.28.3",
     "y-sweet": "^0.1.0"
   },
   "type": "module",
@@ -52,10 +53,5 @@
     "y-indexeddb": "^9.0.12",
     "y-prosemirror": "^1.2.2",
     "yjs": "^13.6.12"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "y-sweet@0.1.0": "patches/y-sweet@0.1.0.patch"
-    }
   }
 }

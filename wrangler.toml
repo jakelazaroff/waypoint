@@ -1,0 +1,22 @@
+name = "travel-y-sweet"
+main = "lib/y-sweet/crates/y-sweet-worker/build/worker/shim.mjs"
+compatibility_date = "2022-01-20"
+
+[vars]
+WORKERS_RS_VERSION = "0.0.18"
+S3_BUCKET_PREFIX = "docs"
+
+[build]
+command = "echo 'Run ./build.sh to rebuild'"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["YServe"]
+
+[[r2_buckets]]
+binding = "Y_SWEET_DATA"
+bucket_name = "travel-prod"
+# preview_bucket_name = "y-sweet-data-dev"
+
+[durable_objects]
+bindings = [{ name = "Y_SWEET", class_name = "YServe" }]

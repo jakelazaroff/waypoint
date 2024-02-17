@@ -1,0 +1,3 @@
+[submodule "lib/y-sweet"]
+	path = lib/y-sweet
+	url = git@github.com:drifting-in-space/y-sweet.git

@@ -1,5 +1,8 @@
-import maplibre, { GeoJSONSource } from "maplibre-gl";
+import { Map, LngLatBounds, GeoJSONSource } from "maplibre-gl";
 import JSONElement, { enableDiff } from "@jakelazaroff/jsonelement";
+
+export { addProtocol } from "maplibre-gl";
+
 enableDiff();
 
 /** @template T @typedef {T extends { new (...args: any[]): infer U } ? U : never} InstanceOf<T> */
@@ -31,7 +34,7 @@ export class MapLibreBase extends HTMLElement {
 }
 
 export class MapLibre extends MapLibreBase {
-  /** @type {maplibre.Map | undefined} */
+  /** @type {Map | undefined} */
   #map;
   #loaded = false;
 
@@ -59,15 +62,15 @@ export class MapLibre extends MapLibreBase {
 
   /** @param {import("./jsonelement.js").JSONChangeEvent} ev */
   handleEvent(ev) {
-    if (ev.target instanceof MapLibreOptions) this.updateOptions(ev.detail.patches);
-    else if (ev.target instanceof MapLibreLayer) this.updateLayer(ev.target, ev.detail.patches);
-    else if (ev.target instanceof HTMLImageElement) this.updateImages();
-    else if (ev.target instanceof MapLibreSource) this.updateSources();
+    if (ev.target instanceof MapLibreOptions) this.#updateOptions(ev.detail.patches);
+    else if (ev.target instanceof MapLibreLayer) this.#updateLayer(ev.target, ev.detail.patches);
+    else if (ev.target instanceof HTMLImageElement) this.#updateImages();
+    else if (ev.target instanceof MapLibreSource) this.#updateSources();
   }
 
   /** @param {import("./jsonelement.js").Patch[]} patches */
-  updateOptions(patches = []) {
-    const [options] = this.slotted(MapLibreOptions);
+  #updateOptions(patches = []) {
+    const [options] = this.#slotted(MapLibreOptions);
 
     for (const { path, value } of patches) {
       const [, key] = path.split("/");
@@ -86,11 +89,11 @@ export class MapLibre extends MapLibreBase {
     }
   }
 
-  updateLayers() {
-    const layers = this.slotted(MapLibreLayer);
+  #updateLayers() {
+    const layers = this.#slotted(MapLibreLayer);
 
     for (const layer of layers) {
-      this.updateLayer(layer);
+      this.#updateLayer(layer);
     }
   }
 
@@ -98,7 +101,7 @@ export class MapLibre extends MapLibreBase {
    * @param {MapLibreLayer} el
    * @param {import("./jsonelement.js").Patch[]} patches
    */
-  updateLayer(el, patches = []) {
+  #updateLayer(el, patches = []) {
     if (!this.#loaded) return;
 
     // create the layer if it doesn't exist
@@ -116,11 +119,11 @@ export class MapLibre extends MapLibreBase {
     }
   }
 
-  updateSources() {
+  #updateSources() {
     if (!this.#loaded) return;
 
     // get a list of all sources
-    const sources = this.slotted(MapLibreSource).map(el => el.json);
+    const sources = this.#slotted(MapLibreSource).map(el => el.json);
 
     // for each source…
     for (const { id, ...json } of sources) {
@@ -132,10 +135,10 @@ export class MapLibre extends MapLibreBase {
     }
   }
 
-  updateImages() {
+  #updateImages() {
     if (!this.#loaded) return;
 
-    const images = this.slotted(HTMLImageElement);
+    const images = this.#slotted(HTMLImageElement);
 
     for (const img of images) {
       const image = this.map.getImage(img.id);
@@ -148,14 +151,14 @@ export class MapLibre extends MapLibreBase {
     const container = this.shadowRoot?.querySelector(".map");
     if (!(container instanceof HTMLElement)) return;
 
-    const [options] = this.slotted(MapLibreOptions);
-    this.#map = new maplibre.Map({ ...options.json, container });
+    const [options] = this.#slotted(MapLibreOptions);
+    this.#map = new Map({ ...options.json, container });
 
     this.map.once("load", () => {
       this.#loaded = true;
-      this.updateSources();
-      this.updateImages();
-      this.updateLayers();
+      this.#updateSources();
+      this.#updateImages();
+      this.#updateLayers();
     });
   }
 
@@ -163,7 +166,7 @@ export class MapLibre extends MapLibreBase {
    * @template {typeof HTMLElement} T
    * @param {T} tag
    */
-  slotted(tag) {
+  #slotted(tag) {
     /** @type {HTMLSlotElement | null | undefined} */
     const slot = this.shadowRoot?.querySelector("slot");
     const els = slot?.assignedElements() || [];
@@ -185,7 +188,7 @@ export class MapLibreOptions extends JSONElement {
     };
   }
 
-  /** @type {maplibre.MapOptions} */
+  /** @type {import("maplibre-gl").MapOptions} */
   get json() {
     const {
       "attribution-control": attributionControl,
@@ -486,7 +489,7 @@ export class MapLibreBounds extends JSONElement {
 
   /** @type {[[number, number], [number, number]]} */
   get json() {
-    const bounds = new maplibre.LngLatBounds();
+    const bounds = new LngLatBounds();
     for (const position of super.json.positions) {
       bounds.extend(position);
     }

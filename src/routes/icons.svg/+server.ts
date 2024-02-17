@@ -7,7 +7,14 @@ export const prerender = true;
 
 export const GET = async function GET() {
   // create an `svg-sprite` instance
-  const spriter = new SVGSpriter({ mode: { symbol: true } });
+  const spriter = new SVGSpriter({
+    mode: { symbol: true },
+    shape: {
+      transform: [
+        { svgo: { plugins: [{ name: "convertColors", params: { currentColor: true } }] } } as any
+      ]
+    }
+  });
 
   // add all the svgs
   for (const svg of await readdir(ICON_DIR)) {

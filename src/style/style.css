@@ -6,6 +6,11 @@ body {
   height: 100%;
 }
 
-body {
+:root {
   font-family: "Overpass", sans-serif;
+  --color-primary: #5c7cfa;
+}
+
+strong {
+  font-weight: 400;
 }

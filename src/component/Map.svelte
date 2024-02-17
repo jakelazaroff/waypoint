@@ -1,10 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { Protocol } from "pmtiles";
+  // import layers from "protomaps-themes-base";
+
   import "./geojson.js";
-  import { register, type MapLibre, type MapLibreBounds } from "./maplibre.js";
+  import { addProtocol, register, type MapLibre, type MapLibreBounds } from "./maplibre.js";
 
   let ready = $state(false);
   onMount(async () => {
+    addProtocol("pmtiles", new Protocol().tile);
     await register();
     ready = true;
   });
@@ -16,11 +20,28 @@
   let { places, routes } = $props<{ places: Place[]; routes: Route[] }>();
   let map = $state<MapLibre>();
   let bounds = $state<MapLibreBounds>();
+
+  // const style = {
+  //   version: 8,
+  //   glyphs: "https://cdn.protomaps.com/fonts/pbf/{fontstack}/{range}.pbf",
+  //   sources: {
+  //     protomaps: {
+  //       type: "vector",
+  //       url: "url",
+  //       attribution:
+  //         '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>'
+  //     }
+  //   },
+  //   layers: layers("protomaps", "light")
+  // };
+
+  // console.log(style);
 </script>
 
 <div class="wrapper">
   <div class="tools">
     <Button
+      square
       onclick={() => {
         if (!bounds) return;
         map?.map.fitBounds(bounds.json);

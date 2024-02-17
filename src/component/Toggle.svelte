@@ -16,26 +16,30 @@
 
 <style>
   button {
+    --background-mix: 0%;
     display: grid;
     appearance: none;
     border: 0;
-    background-color: #ffffff;
+    background-color: color-mix(in srgb, currentColor var(--background-mix), #ffffff);
     padding: 6px;
     border-radius: 8px;
-    transition: background-color 0.25s ease;
+    transition:
+      color 0.25s ease,
+      background-color 0.25s ease;
   }
 
   button:hover,
   button[aria-pressed="true"] {
-    background-color: #dddddd;
+    --background-mix: 20%;
+    color: var(--color-primary);
   }
 
   button:active,
   button[aria-pressed="true"]:hover {
-    background-color: #bbbbbb;
+    --background-mix: 40%;
   }
 
   button[aria-pressed="true"]:active {
-    background-color: #dddddd;
+    --background-mix: 20%;
   }
 </style>

@@ -201,7 +201,7 @@
   }
 
   .outline :global(place-tag) {
-    color: #5c7cfa;
+    color: var(--color-primary);
     font-weight: bold;
   }
 

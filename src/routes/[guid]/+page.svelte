@@ -9,6 +9,7 @@
   import Doc from "~/lib/doc.svelte";
   import Collab, { randomUsername, randomColor } from "~/lib/collab.svelte";
   import { download, open } from "~/lib/file";
+  import Tooltip from "~/component/Tooltip.svelte";
 
   let { data } = $props();
 
@@ -56,13 +57,23 @@
         <span class="label">Open</span>
       </Button>
       <div class="right">
-        <Toggle bind:checked={focused} label="focus">
-          <Icon name="focus" />
-        </Toggle>
+        <Tooltip delay={500}>
+          {#snippet content()}
+            {focused ? "Disable" : "Enable"} focus mode
+          {/snippet}
+          <Toggle bind:checked={focused} label="focus">
+            <Icon name="focus" />
+          </Toggle>
+        </Tooltip>
         <ul class="avatars">
           {#each [...collab.peers, collab.local] as peer}
             <li class="avatar">
-              <Avatar name={peer.user.name} color={peer.user.color} size={20} />
+              <Tooltip>
+                {#snippet content()}
+                  {peer.user.name}
+                {/snippet}
+                <Avatar name={peer.user.name} color={peer.user.color} size={20} />
+              </Tooltip>
             </li>
           {/each}
         </ul>
@@ -90,6 +101,8 @@
       "outline" 1fr;
     height: 100%;
     overflow: hidden;
+    position: relative;
+    z-index: 1;
   }
 
   .toolbar {

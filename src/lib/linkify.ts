@@ -1,5 +1,5 @@
 import { Plugin } from "prosemirror-state";
-import { Fragment, Node, Slice } from "prosemirror-model";
+import { Fragment, Slice, type Node } from "prosemirror-model";
 
 const HTTP_LINK_REGEX = /\bhttps?:\/\/[\w_\/\.]+/g;
 

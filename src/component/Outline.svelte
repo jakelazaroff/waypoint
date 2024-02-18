@@ -242,7 +242,7 @@
     line-height: normal;
     user-select: none;
     color: white;
-    padding: 0 4px;
+    padding: 1px 4px 0;
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;

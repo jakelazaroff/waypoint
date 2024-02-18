@@ -11,8 +11,22 @@ import type { Place, Route } from "./place";
 
 export default class Doc {
   ydoc = $state(new YDoc());
+
   get guid() {
     return this.ydoc.guid;
+  }
+
+  #title = $state("" + this.ydoc.getText("title"));
+
+  get title() {
+    return this.#title;
+  }
+
+  set title(title: string) {
+    const text = this.ydoc.getText("title");
+    text.delete(0, text.length);
+    text.insert(0, title);
+    this.#title = title;
   }
 
   outline = $derived(this.ydoc.getXmlFragment("outline"));
@@ -21,13 +35,15 @@ export default class Doc {
     this.ydoc = ydoc;
 
     // HACK places: the yjs doc is mutated internally, so we need to manually invalidate the reactive variable
-    this.#invalidateOutline();
-    this.ydoc.on("update", () => this.#invalidateOutline());
+    this.#invalidate();
+    this.ydoc.on("update", () => this.#invalidate());
   }
 
   // HACK places: the yjs doc is mutated internally, so we need to manually invalidate the reactive variable
   #outline = $state(this.ydoc.getXmlFragment("outline"));
-  #invalidateOutline() {
+  #invalidate() {
+    this.#title = "" + this.ydoc.getText("title");
+
     // @ts-expect-error
     this.#outline = undefined;
     this.#outline = this.ydoc.getXmlFragment("outline");

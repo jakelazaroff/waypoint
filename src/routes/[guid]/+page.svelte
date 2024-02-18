@@ -10,6 +10,7 @@
   import Collab, { randomUsername, randomColor } from "~/lib/collab.svelte";
   import { download, open } from "~/lib/file";
   import Tooltip from "~/component/Tooltip.svelte";
+  import Input from "~/component/Input.svelte";
 
   let { data } = $props();
 
@@ -28,35 +29,40 @@
 </script>
 
 <svelte:head>
-  <title>travel</title>
+  <title>{doc.title || "Untitled"} | travel</title>
 </svelte:head>
 
 <div class="wrapper">
   <div class="data">
     <div class="toolbar">
-      <Button
-        onclick={() => {
-          const name = prompt("Enter a file name");
-          if (!name) return;
+      <div class="group">
+        <Button
+          onclick={() => {
+            const name = prompt("Enter a file name");
+            if (!name) return;
 
-          const file = doc.serialize(`${name}.travel`);
-          download(file);
-        }}
-      >
-        <Icon name="save" />
-        <span class="label">Save</span>
-      </Button>
-      <Button
-        onclick={async () => {
-          // const [file] = await open();
-          // const state = new Uint8Array(await file.arrayBuffer());
-          // doc = Doc.parse(state);
-        }}
-      >
-        <Icon name="open" />
-        <span class="label">Open</span>
-      </Button>
-      <div class="right">
+            const file = doc.serialize(`${name}.travel`);
+            download(file);
+          }}
+        >
+          <Icon name="save" />
+          <span class="label">Save</span>
+        </Button>
+        <Button
+          onclick={async () => {
+            // const [file] = await open();
+            // const state = new Uint8Array(await file.arrayBuffer());
+            // doc = Doc.parse(state);
+          }}
+        >
+          <Icon name="open" />
+          <span class="label">Open</span>
+        </Button>
+      </div>
+      <div class="group">
+        <Input placeholder="Untitled" bind:value={doc.title} />
+      </div>
+      <div class="group">
         <Tooltip delay={500}>
           {#snippet content()}
             {focused ? "Disable" : "Enable"} focus mode
@@ -107,6 +113,7 @@
 
   .toolbar {
     display: flex;
+    justify-content: space-between;
     padding: 8px;
     box-shadow: 0 1px 0 #00000011;
     column-gap: 4px;
@@ -116,8 +123,7 @@
     translate: 0 0.1em;
   }
 
-  .right {
-    margin-left: auto;
+  .group {
     display: flex;
     align-items: center;
     column-gap: 4px;

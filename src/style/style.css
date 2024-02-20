@@ -10,3 +10,15 @@ body {
   font-family: "Overpass", sans-serif;
   --color-primary: #5c7cfa;
 }
+
+p {
+  margin-block: 1em;
+}
+
+p:first-child {
+  margin-block-start: 0;
+}
+
+p:last-child {
+  margin-block-end: 0;
+}

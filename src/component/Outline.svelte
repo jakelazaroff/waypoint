@@ -195,6 +195,10 @@
     opacity: 0.25;
   }
 
+  .outline :global(p) {
+    margin: 0;
+  }
+
   .outline :global(:where(ol, ul)) {
     list-style: revert;
     margin-inline-start: 1.5em;

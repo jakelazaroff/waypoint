@@ -11,6 +11,7 @@
   import { download, open } from "~/lib/file";
   import Tooltip from "~/component/Tooltip.svelte";
   import Input from "~/component/Input.svelte";
+  import Modal from "~/component/Modal.svelte";
 
   let { data } = $props();
 
@@ -26,6 +27,7 @@
 
   let places = $derived(doc.places(focused ? collab.local.cursor?.head : undefined));
   let routes = $derived(doc.routes(focused ? collab.local.cursor?.head : undefined));
+  let help = $state<Modal>();
 </script>
 
 <svelte:head>
@@ -36,7 +38,11 @@
   <div class="data">
     <div class="toolbar">
       <div class="group">
-        <Button
+        <Button onclick={() => help?.show()}>
+          <Icon name="help" />
+          <span class="label">Help</span>
+        </Button>
+        <!-- <Button
           onclick={() => {
             const name = prompt("Enter a file name");
             if (!name) return;
@@ -50,14 +56,14 @@
         </Button>
         <Button
           onclick={async () => {
-            // const [file] = await open();
-            // const state = new Uint8Array(await file.arrayBuffer());
-            // doc = Doc.parse(state);
+            const [file] = await open();
+            const state = new Uint8Array(await file.arrayBuffer());
+            doc = Doc.parse(state);
           }}
         >
           <Icon name="open" />
           <span class="label">Open</span>
-        </Button>
+        </Button> -->
       </div>
       <div class="group">
         <Input placeholder="Untitled" bind:value={doc.title} />
@@ -89,6 +95,22 @@
   </div>
   <Map {places} {routes} />
 </div>
+<Modal bind:this={help} title="Help">
+  <p>travel is a rich text editor with extra capabilities for planning trips</p>
+  <p>
+    cmd+b is bold. cmd+i is italic. <code>-</code> at the beginning of a line starts a bulleted list
+    and <code>1.</code> at the beginning of the a starts a numbered list
+  </p>
+  <p>type <code>@</code> to search for places to plot on the map</p>
+  <p>
+    type <code>~</code> at the start of the line to create a route list, which draws lines between all
+    places inside it
+  </p>
+  <p>
+    cmd+d or this button <Icon name="focus" /> enters focus mode, which only shows locations in the same
+    block as your cursor.
+  </p>
+</Modal>
 
 <style>
   .wrapper {

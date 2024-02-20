@@ -24,8 +24,8 @@
 
   let focused = $state(false);
 
-  let places = $derived(doc.places(focused ? collab.local.cursor : undefined));
-  let routes = $derived(doc.routes(focused ? collab.local.cursor : undefined));
+  let places = $derived(doc.places(focused ? collab.local.cursor?.head : undefined));
+  let routes = $derived(doc.routes(focused ? collab.local.cursor?.head : undefined));
 </script>
 
 <svelte:head>

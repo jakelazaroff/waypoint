@@ -10,7 +10,7 @@ export interface User {
 
 interface Peer {
   user: User;
-  cursor?: RelativePosition;
+  cursor?: { anchor?: RelativePosition; head?: RelativePosition };
 }
 
 export default class Collab {
@@ -34,10 +34,6 @@ export default class Collab {
       this.local = (this.#provider.awareness.getLocalState() as Peer) || this.#local;
       this.#states = [...this.#provider.awareness.getStates().values()] as Peer[];
     });
-  }
-
-  set cursor(pos: RelativePosition) {
-    this.#provider.awareness.setLocalStateField("cursor", pos);
   }
 }
 

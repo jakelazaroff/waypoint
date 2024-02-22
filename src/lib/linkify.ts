@@ -1,7 +1,8 @@
 import { Plugin } from "prosemirror-state";
 import { Fragment, Slice, type Node } from "prosemirror-model";
 
-const HTTP_LINK_REGEX = /\bhttps?:\/\/[\w_\/\.]+/g;
+const HTTP_LINK_REGEX =
+  /\bhttps?:\/\/[a-zA-Z0-9\-]+(?:\.[a-zA-Z0-9\-]+)*(?::\d+)?(?:\/[^\s.]*\/?)*/g;
 
 /** Take a fragment and return a new fragment with URLs marked as links */
 function _linkify(fragment: Fragment) {

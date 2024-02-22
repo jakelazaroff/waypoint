@@ -40,7 +40,7 @@
 >
   <header class="header">
     <span class="title">{title}</span>
-    <Button onclick={() => dialog?.close()}><Icon name="close" /></Button>
+    <Button square onclick={() => dialog?.close()}><Icon name="close" /></Button>
   </header>
   <div class="content">
     {@render children()}

@@ -19,11 +19,11 @@
 
 <style>
   sl-tooltip::part(base__popup) {
-    padding: 2px 6px 1px;
+    padding: 4px 8px;
     font-size: 0.75rem;
     background-color: #000000;
     color: #ffffff;
-    border-radius: 4px;
+    border-radius: 6px;
   }
 
   sl-tooltip::part(base__arrow) {

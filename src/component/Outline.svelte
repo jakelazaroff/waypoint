@@ -25,7 +25,8 @@
   import linkify from "~/lib/linkify";
   import LocationResults from "~/component/LocationResults.svelte";
   import type Collab from "~/lib/collab.svelte";
-  import { unstate, untrack } from "svelte";
+  import { plugin as editor } from "~/lib/editor.svelte";
+  import { untrack } from "svelte";
 
   interface Props {
     document: XmlFragment;
@@ -116,6 +117,7 @@
           ySyncPlugin(document),
           yCursorPlugin(collab.awareness),
           yUndoPlugin(),
+          editor,
           ...places.plugin,
           linkify(),
           focus(),

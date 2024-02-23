@@ -6,12 +6,21 @@
     border?: boolean;
     checked: boolean;
     children: Snippet;
+    onchange?(checked: boolean): void;
   }
 
-  let { children, label, border, checked } = $props<Props>();
+  let { children, label, border, checked, onchange = () => {} } = $props<Props>();
 </script>
 
-<button class:border aria-pressed={checked} onclick={() => (checked = !checked)} aria-label={label}>
+<button
+  class:border
+  aria-pressed={checked}
+  onclick={() => {
+    checked = !checked;
+    onchange(checked);
+  }}
+  aria-label={label}
+>
   {@render children()}
 </button>
 

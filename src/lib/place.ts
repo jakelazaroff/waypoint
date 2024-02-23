@@ -5,8 +5,8 @@ export type Route = {
   places: Place[];
 };
 
-export interface Place {
+export type Place = {
   type: "place";
   name: string;
   position: [number, number];
-}
+};

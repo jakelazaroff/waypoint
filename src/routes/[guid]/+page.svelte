@@ -12,6 +12,8 @@
   import Input from "~/component/Input.svelte";
   import HelpModal from "~/component/HelpModal.svelte";
   import type Modal from "~/component/Modal.svelte";
+  import editor, { embolden, italicize } from "~/lib/editor.svelte";
+  import Toggle from "~/component/Toggle.svelte";
 
   let { data } = $props();
 
@@ -38,6 +40,12 @@
   <div class="toolbar">
     <div class="group">
       <h1 class="title"><Icon name="journey" /><span>Waypoint</span></h1>
+      <Toggle label="bold" checked={editor.bold} onchange={embolden}>
+        <Icon name="bold" size={12} />
+      </Toggle>
+      <Toggle label="italic" checked={editor.italic} onchange={italicize}>
+        <Icon name="italic" size={12} />
+      </Toggle>
       <!-- <Button
         onclick={() => {
           const name = prompt("Enter a file name");
@@ -119,6 +127,7 @@
     gap: 6px;
     font-size: 1rem;
     text-transform: uppercase;
+    margin-right: 12px;
   }
 
   .group {

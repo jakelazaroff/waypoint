@@ -237,6 +237,28 @@
     font-weight: bold;
   }
 
+  .outline :global(ol[data-route]) {
+    list-style: none;
+  }
+
+  .outline :global(ol[data-route]) > :global(li) {
+    position: relative;
+  }
+
+  .outline :global(ol[data-route]) > :global(li)::before {
+    content: "";
+    display: inline-block;
+    position: absolute;
+    top: 0.25em;
+    width: 1em;
+    height: 1em;
+    margin-left: -1.25em;
+    margin-right: 0.25em;
+
+    background: center url("/bullet.svg") no-repeat;
+    background-size: 0.625em;
+  }
+
   .results {
     position: fixed;
     z-index: 99999999;

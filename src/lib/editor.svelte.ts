@@ -1,5 +1,5 @@
-import { EditorState, Plugin, SelectionRange } from "prosemirror-state";
-import type { MarkType, Node } from "prosemirror-model";
+import { EditorState, Plugin } from "prosemirror-state";
+import type { MarkType } from "prosemirror-model";
 import type { EditorView } from "prosemirror-view";
 import { toggleMark } from "prosemirror-commands";
 

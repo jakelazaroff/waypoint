@@ -55,6 +55,7 @@
     translate: -50% -50%;
     border-radius: 16px;
     border: none;
+    max-width: var(--max-width);
   }
 
   ::backdrop {

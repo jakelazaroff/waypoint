@@ -4,12 +4,13 @@
   interface Props {
     children: Snippet;
     square?: boolean;
+    border?: boolean;
     onclick?(evt: MouseEvent & { currentTarget: HTMLButtonElement }): void;
   }
-  const { children, square, onclick } = $props<Props>();
+  const { children, square, border, onclick } = $props<Props>();
 </script>
 
-<button class:square {onclick}>{@render children()}</button>
+<button class:square class:border {onclick}>{@render children()}</button>
 
 <style>
   button {
@@ -26,7 +27,12 @@
     line-height: 1;
     transition:
       color 0.25s ease,
-      background-color 0.25s ease;
+      background-color 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+
+  button.border {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 10%, transparent);
   }
 
   button.square {

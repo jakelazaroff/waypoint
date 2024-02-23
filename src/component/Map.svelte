@@ -5,6 +5,7 @@
 
   import "./geojson.js";
   import { addProtocol, register, type MapLibre, type MapLibreBounds } from "./maplibre.js";
+  import Tooltip from "./Tooltip.svelte";
 
   let ready = $state(false);
   onMount(async () => {
@@ -16,8 +17,13 @@
   import { type Place, type Route } from "~/lib/place";
   import Icon from "~/component/Icon.svelte";
   import Button from "~/component/Button.svelte";
+  import Toggle from "./Toggle.svelte";
 
-  let { places, routes } = $props<{ places: Place[]; routes: Route[] }>();
+  let { focused, places, routes } = $props<{
+    focused: boolean;
+    places: Place[];
+    routes: Route[];
+  }>();
   let map = $state<MapLibre>();
   let bounds = $state<MapLibreBounds>();
 
@@ -40,19 +46,33 @@
 
 <div class="wrapper">
   <div class="tools">
-    <Button
-      square
-      onclick={() => {
-        if (!bounds) return;
-        map?.map.fitBounds(bounds.json);
-      }}
-    >
-      <Icon name="pins" />
-    </Button>
+    <Tooltip delay={500} placement="left">
+      {#snippet content()}
+        {focused ? "Disable" : "Enable"} focus mode
+      {/snippet}
+      <Toggle border bind:checked={focused} label="focus">
+        <Icon name="focus" />
+      </Toggle>
+    </Tooltip>
+    <Tooltip delay={500} placement="left">
+      {#snippet content()}
+        Center map
+      {/snippet}
+      <Button
+        square
+        border
+        onclick={() => {
+          if (!bounds) return;
+          map?.map.fitBounds(bounds.json);
+        }}
+      >
+        <Icon name="pins" />
+      </Button>
+    </Tooltip>
   </div>
 
   {#if ready}
-    <map-libre bind:this={map}>
+    <map-libre class:ready bind:this={map}>
       <maplibre-options diff style-url="https://tiles.stadiamaps.com/styles/outdoors.json" zoom={7}>
         {#if places.length}
           <maplibre-bounds slot="bounds" bind:this={bounds}>
@@ -151,21 +171,41 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background-color: #354b68;
+    isolation: isolate;
   }
 
-  .map {
+  map-libre {
+    display: block;
+    position: relative;
     width: 100%;
     height: 100%;
     opacity: 0;
     transition: opacity 0.5s ease;
+    border-radius: 6px;
+    overflow: hidden;
   }
 
-  .map.loaded {
+  map-libre::after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    box-shadow: inset 0 0 0 1px #00000011;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  map-libre.ready {
     opacity: 1;
   }
 
   .tools {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     position: absolute;
     top: 8px;
     right: 8px;

@@ -19,7 +19,6 @@
   <text
     x="50%"
     y="50%"
-    dy={size / 16}
     dominant-baseline="central"
     text-anchor="middle"
     fill="white"

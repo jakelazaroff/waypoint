@@ -6,12 +6,13 @@
     content: Snippet;
     children: Snippet;
     delay?: number;
+    placement?: "top" | "right" | "bottom" | "left";
   }
 
-  const { content, children, delay = 0 } = $props<Props>();
+  const { content, children, delay = 0, placement = "top" } = $props<Props>();
 </script>
 
-<sl-tooltip hoist style:--show-delay="{delay}ms">
+<sl-tooltip hoist style:--show-delay="{delay}ms" {placement}>
   <div slot="content">{@render content()}</div>
   {@render children()}
 </sl-tooltip>

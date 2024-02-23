@@ -43,7 +43,7 @@ export class MapLibre extends MapLibreBase {
 
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `
-      <div export class="map"></div>
+      <div export class="map" part="map"></div>
       <slot></slot>
       <style>
         .map { width: 100%; height: 100%; }
@@ -55,17 +55,39 @@ export class MapLibre extends MapLibreBase {
     this.addEventListener("json-change", this);
   }
 
-  get map() {
-    if (!this.#map) throw new Error(`No Map instance found`);
-    return this.#map;
+  connectedCallback() {
+    const container = this.shadowRoot?.querySelector(".map");
+    if (!(container instanceof HTMLElement)) return;
+
+    const [options] = this.#slotted(MapLibreOptions);
+    this.#map = new Map({ ...options.json, container });
+
+    this.map.once("load", () => {
+      this.#loaded = true;
+      this.#updateSources();
+      this.#updateImages();
+      this.#updateLayers();
+    });
+
+    window.addEventListener("resize", this);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("resize", this);
   }
 
   /** @param {import("./jsonelement.js").JSONChangeEvent} ev */
   handleEvent(ev) {
-    if (ev.target instanceof MapLibreOptions) this.#updateOptions(ev.detail.patches);
+    if (ev.type === "resize") this.#map?.resize();
+    else if (ev.target instanceof MapLibreOptions) this.#updateOptions(ev.detail.patches);
     else if (ev.target instanceof MapLibreLayer) this.#updateLayer(ev.target, ev.detail.patches);
     else if (ev.target instanceof HTMLImageElement) this.#updateImages();
     else if (ev.target instanceof MapLibreSource) this.#updateSources();
+  }
+
+  get map() {
+    if (!this.#map) throw new Error(`No Map instance found`);
+    return this.#map;
   }
 
   /** @param {import("./jsonelement.js").Patch[]} patches */
@@ -145,21 +167,6 @@ export class MapLibre extends MapLibreBase {
       if (!image) this.map.addImage(img.id, img);
       else this.map.updateImage(img.id, img);
     }
-  }
-
-  connectedCallback() {
-    const container = this.shadowRoot?.querySelector(".map");
-    if (!(container instanceof HTMLElement)) return;
-
-    const [options] = this.#slotted(MapLibreOptions);
-    this.#map = new Map({ ...options.json, container });
-
-    this.map.once("load", () => {
-      this.#loaded = true;
-      this.#updateSources();
-      this.#updateImages();
-      this.#updateLayers();
-    });
   }
 
   /**

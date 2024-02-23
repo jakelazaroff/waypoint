@@ -25,6 +25,7 @@
   import linkify from "~/lib/linkify";
   import LocationResults from "~/component/LocationResults.svelte";
   import type Collab from "~/lib/collab.svelte";
+  import { unstate, untrack } from "svelte";
 
   interface Props {
     document: XmlFragment;
@@ -151,11 +152,18 @@
         ]
       })
     });
+
+    untrack(() => view).dom.addEventListener("scroll", e => {
+      if (e.currentTarget instanceof HTMLElement) scrolled = e.currentTarget.scrollTop > 0;
+    });
+
     return () => view.destroy();
   });
+
+  let scrolled = $state(false);
 </script>
 
-<div class="outline" class:focused bind:this={el}></div>
+<div class="outline" class:focused class:scrolled bind:this={el}></div>
 
 {#if places.state.open}
   <div
@@ -177,9 +185,27 @@
 <style>
   .outline {
     all: unset;
+    position: relative;
     height: 100%;
     display: grid;
     overflow: hidden;
+  }
+
+  .outline::after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    background-image: linear-gradient(to right, #00000022 50%, transparent);
+  }
+
+  .outline.scrolled::after {
+    opacity: 1;
   }
 
   .outline :global(.ProseMirror) {

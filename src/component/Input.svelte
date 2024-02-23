@@ -11,7 +11,7 @@
 
 <style>
   input {
-    padding: 6px 8px 4px;
+    padding: 4px 8px;
     font-size: 0.75rem;
     border-radius: 8px;
     border: 1px solid #dddddd;

@@ -39,7 +39,7 @@
 <div class="wrapper">
   <div class="toolbar">
     <div class="group">
-      <h1 class="title"><Icon name="journey" /><span>Waypoint</span></h1>
+      <h1 class="title"><img class="logo" src="/logo.svg" alt="waypoint" height="16" /></h1>
       <Toggle label="bold" checked={editor.bold} onchange={embolden}>
         <Icon name="bold" size={12} />
       </Toggle>

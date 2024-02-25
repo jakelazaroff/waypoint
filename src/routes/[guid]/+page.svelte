@@ -12,7 +12,7 @@
   import Input from "~/component/Input.svelte";
   import HelpModal from "~/component/HelpModal.svelte";
   import type Modal from "~/component/Modal.svelte";
-  import editor, { embolden, italicize } from "~/lib/editor.svelte";
+  import editor, { embolden, italicize, wrapInBullet, wrapInNumber } from "~/lib/editor.svelte";
   import Toggle from "~/component/Toggle.svelte";
 
   let { data } = $props();
@@ -46,6 +46,12 @@
       <Toggle label="italic" checked={editor.italic} onchange={italicize}>
         <Icon name="italic" size={12} />
       </Toggle>
+      <!-- <Toggle label="bullet list" checked={false} onchange={wrapInBullet}>
+        <Icon name="ul" size={12} />
+      </Toggle>
+      <Toggle label="numbered list" checked={false} onchange={wrapInNumber}>
+        <Icon name="ol" size={12} />
+      </Toggle> -->
       <!-- <Button
         onclick={() => {
           const name = prompt("Enter a file name");

@@ -1,7 +1,7 @@
 import { EditorState, Plugin } from "prosemirror-state";
 import type { MarkType } from "prosemirror-model";
 import type { EditorView } from "prosemirror-view";
-import { toggleMark } from "prosemirror-commands";
+import { toggleMark, wrapIn } from "prosemirror-commands";
 
 let bold = $state(false);
 let italic = $state(false);
@@ -13,6 +13,14 @@ export function embolden() {
 
 export function italicize() {
   if (view) toggleMark(view.state.schema.marks.em)(view.state, view.dispatch);
+}
+
+export function wrapInBullet() {
+  if (view) wrapIn(view.state.schema.nodes.bullet_list)(view.state, view.dispatch);
+}
+
+export function wrapInNumber() {
+  if (view) wrapIn(view.state.schema.nodes.ordered_list)(view.state, view.dispatch);
 }
 
 export default {

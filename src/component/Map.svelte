@@ -66,7 +66,7 @@
           map?.map.fitBounds(bounds.json);
         }}
       >
-        <Icon name="pins" />
+        <Icon name="compass" />
       </Button>
     </Tooltip>
   </div>

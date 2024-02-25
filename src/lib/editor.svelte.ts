@@ -8,19 +8,23 @@ let italic = $state(false);
 let view: EditorView | undefined;
 
 export function embolden() {
-  if (view) toggleMark(view.state.schema.marks.strong)(view.state, view.dispatch);
+  if (!view) return;
+  toggleMark(view.state.schema.marks.strong)(view.state, view.dispatch);
 }
 
 export function italicize() {
-  if (view) toggleMark(view.state.schema.marks.em)(view.state, view.dispatch);
+  if (!view) return;
+  toggleMark(view.state.schema.marks.em)(view.state, view.dispatch);
 }
 
 export function wrapInBullet() {
-  if (view) wrapIn(view.state.schema.nodes.bullet_list)(view.state, view.dispatch);
+  if (!view) return;
+  wrapIn(view.state.schema.nodes.bullet_list)(view.state, view.dispatch);
 }
 
 export function wrapInNumber() {
-  if (view) wrapIn(view.state.schema.nodes.ordered_list)(view.state, view.dispatch);
+  if (!view) return;
+  wrapIn(view.state.schema.nodes.ordered_list)(view.state, view.dispatch);
 }
 
 export default {
@@ -55,6 +59,22 @@ export const plugin = new Plugin({
 function hasMark(state: EditorState, type: MarkType) {
   const { doc, selection, storedMarks } = state;
 
+  // if the user *just* toggled the given mark, the next character entered will have it
   if (storedMarks?.some(mark => mark.type === type)) return true;
-  return selection.ranges.every(({ $from, $to }) => doc.rangeHasMark($from.pos - 1, $to.pos, type));
+
+  // otherwise, check whether the selection ranges have the mark applied
+  return selection.ranges.every(({ $from, $to }) => {
+    // if the selection range is not just the cursor between characters, return whether the range has the mark
+    if ($from.pos !== $to.pos) return doc.rangeHasMark($from.pos, $to.pos, type);
+
+    let start = $from.pos,
+      end = $to.pos;
+
+    // if cursor is at the beginning of a node, include the next character
+    if ($from.parentOffset === 0) end += 1;
+    // otherwise, include the previous character
+    else start -= 1;
+
+    return doc.rangeHasMark(start, end, type);
+  });
 }

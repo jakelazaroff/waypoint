@@ -15,6 +15,7 @@
   "devDependencies": {
     "@sveltejs/kit": "^2.5.1",
     "@sveltejs/vite-plugin-svelte": "^3.0.2",
+    "@types/mapbox__polyline": "^1.0.5",
     "@types/node": "^20.11.13",
     "@types/svg-sprite": "^0.0.38",
     "prettier": "^3.1.1",
@@ -32,6 +33,7 @@
   "type": "module",
   "dependencies": {
     "@jakelazaroff/jsonelement": "^0.2.0",
+    "@mapbox/polyline": "^1.2.1",
     "@shoelace-style/shoelace": "^2.14.0",
     "@stadiamaps/api": "^1.0.10",
     "@sveltejs/adapter-cloudflare": "^4.1.0",

@@ -84,10 +84,11 @@ export default class Doc {
       const name = el.getAttribute("name");
       const lon = Number(el.getAttribute("lon"));
       const lat = Number(el.getAttribute("lat"));
+      const navigate = Boolean(el.getAttribute("navigate"));
       if (!name || Number.isNaN(lon) || Number.isNaN(lat)) continue;
 
       // push the place into the results list
-      results.push({ type: "place", name, position: [lon, lat] });
+      results.push({ type: "place", name, navigate, position: [lon, lat] });
     }
 
     return results;
@@ -126,10 +127,11 @@ export default class Doc {
         const name = place.getAttribute("name");
         const lon = Number(place.getAttribute("lon"));
         const lat = Number(place.getAttribute("lat"));
+        const navigate = Boolean(place.getAttribute("navigate"));
         if (!name || Number.isNaN(lon) || Number.isNaN(lat)) continue;
 
         // push the place into the route
-        result.places.push({ type: "place", name, position: [lon, lat] });
+        result.places.push({ type: "place", name, navigate, position: [lon, lat] });
       }
 
       // if the route has at least one places, push it into the results list

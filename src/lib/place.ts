@@ -8,5 +8,6 @@ export type Route = {
 export type Place = {
   type: "place";
   name: string;
+  navigate: boolean;
   position: [number, number];
 };

@@ -4,9 +4,9 @@
   import { ySyncPlugin, yUndoPlugin, undo, redo, yCursorPlugin } from "y-prosemirror";
   import { schema as basic } from "prosemirror-schema-basic";
   import { EditorState } from "prosemirror-state";
-  import { type NodeSpec, Schema } from "prosemirror-model";
+  import { type NodeSpec, Schema, Node } from "prosemirror-model";
   import { baseKeymap, toggleMark } from "prosemirror-commands";
-  import { EditorView } from "prosemirror-view";
+  import { EditorView, type NodeViewConstructor } from "prosemirror-view";
   import { history } from "prosemirror-history";
   import { keymap } from "prosemirror-keymap";
   import { addListNodes, liftListItem, sinkListItem, splitListItem } from "prosemirror-schema-list";
@@ -26,7 +26,8 @@
   import LocationResults from "~/component/LocationResults.svelte";
   import type Collab from "~/lib/collab.svelte";
   import { plugin as editor } from "~/lib/editor.svelte";
-  import { untrack } from "svelte";
+  import { type SvelteComponent, type ComponentType, mount, untrack } from "svelte";
+  import PlaceTag from "~/component/PlaceTag.svelte";
 
   interface Props {
     document: XmlFragment;
@@ -46,7 +47,7 @@
     atom: true,
     selectable: false,
     draggable: false,
-    attrs: { name: {}, lon: {}, lat: {} },
+    attrs: { name: {}, lon: {}, lat: {}, navigate: {} },
     toDOM: node => ["place-tag", node.attrs, "@" + node.attrs.name],
     parseDOM: [
       {
@@ -64,6 +65,38 @@
       }
     ]
   };
+
+  // const popover = new Plugin({
+  //   view: () => ({
+  //     update(view, lastState) {
+  //       let state = view.state;
+  //       // Don't do anything if the document/selection didn't change
+  //       if (lastState && lastState.doc.eq(state.doc) && lastState.selection.eq(state.selection))
+  //         return;
+
+  //       // Hide the tooltip if the selection is empty
+  //       if (state.selection.empty) {
+  //         this.tooltip.style.display = "none";
+  //         return;
+  //       }
+
+  //       // Otherwise, reposition it and update its content
+  //       this.tooltip.style.display = "";
+  //       let { from, to } = state.selection;
+  //       // These are in screen coordinates
+  //       let start = view.coordsAtPos(from),
+  //         end = view.coordsAtPos(to);
+  //       // The box in which the tooltip is positioned, to use as base
+  //       let box = this.tooltip.offsetParent.getBoundingClientRect();
+  //       // Find a center-ish x position from the selection endpoints (when
+  //       // crossing lines, end may be more to the left)
+  //       let left = Math.max((start.left + end.left) / 2, start.left + 3);
+  //       this.tooltip.style.left = left - box.left + "px";
+  //       this.tooltip.style.bottom = box.bottom - start.top + "px";
+  //       this.tooltip.textContent = to - from;
+  //     }
+  //   })
+  // });
 
   const route: NodeSpec = {
     content: "list_item+",
@@ -84,6 +117,48 @@
     }
   };
 
+  class SvelteNodeView {
+    node: Node;
+    view: EditorView;
+    getPos: () => number | undefined;
+    dom: Element;
+
+    constructor(
+      comp: ComponentType<
+        SvelteComponent<Record<string, any> & { onchange(name: string, value: any): void }>
+      >,
+      tag: string,
+      node: Node,
+      view: EditorView,
+      getPos: () => number | undefined
+    ) {
+      this.node = node;
+      this.view = view;
+      this.getPos = getPos;
+
+      const target = (this.dom = window.document.createElement(tag));
+      target.style.display = "contents";
+
+      mount(comp, {
+        target,
+        props: {
+          ...node.attrs,
+          onchange(name, value) {
+            const pos = getPos();
+            if (pos === undefined) return;
+
+            const tr = view.state.tr.setNodeAttribute(pos, name, value);
+            view.dispatch(tr);
+          }
+        }
+      });
+    }
+
+    static create(comp: ComponentType, tag: string = "div"): NodeViewConstructor {
+      return (node, view, dom) => new SvelteNodeView(comp, tag, node, view, dom);
+    }
+  }
+
   const nodes = addListNodes(
     basic.spec.nodes.append({ place, route }),
     "paragraph block*",
@@ -100,7 +175,8 @@
       return schema.nodes.place.create({
         name: feature.properties?.name,
         lon: "" + feature.geometry.coordinates[0],
-        lat: "" + feature.geometry.coordinates[1]
+        lat: "" + feature.geometry.coordinates[1],
+        navigate: false
       });
     }
   });
@@ -111,6 +187,7 @@
     if (!el) return;
 
     view = new EditorView(el, {
+      nodeViews: { place: SvelteNodeView.create(PlaceTag, "place-tag") },
       state: EditorState.create({
         schema,
         plugins: [
@@ -230,11 +307,6 @@
   .outline :global(:where(ol, ul)) {
     list-style: revert;
     margin-inline-start: 1.5em;
-  }
-
-  .outline :global(place-tag) {
-    color: var(--color-primary);
-    font-weight: bold;
   }
 
   .outline :global(ol[data-route]) {

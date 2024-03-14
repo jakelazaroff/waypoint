@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { Protocol } from "pmtiles";
+  import { RoutingApi } from "@stadiamaps/api";
+  import { decode } from "@mapbox/polyline";
   // import layers from "protomaps-themes-base";
 
   import "./geojson.js";
@@ -27,21 +29,58 @@
   let map = $state<MapLibre>();
   let bounds = $state<MapLibreBounds>();
 
-  // const style = {
-  //   version: 8,
-  //   glyphs: "https://cdn.protomaps.com/fonts/pbf/{fontstack}/{range}.pbf",
-  //   sources: {
-  //     protomaps: {
-  //       type: "vector",
-  //       url: "url",
-  //       attribution:
-  //         '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>'
-  //     }
-  //   },
-  //   layers: layers("protomaps", "light")
-  // };
+  function key(a: Place, b: Place) {
+    if (!a || !b) return "";
+    return `${a.position[0]},${a.position[1]}_${b.position[0]},${b.position[1]}`;
+  }
 
-  // console.log(style);
+  let directions = $state<Record<string, string>>({});
+  let lines = $derived.by(() => {
+    return routes.map(route => {
+      console.log(route.places);
+      return route.places.flatMap((to, i) => {
+        if (!to.navigate) return [to.position];
+
+        const from = route.places[i - 1];
+        if (!from) return [to.position];
+
+        const shape = directions[key(from, to)];
+        if (!shape) return [to.position];
+
+        return decode(shape, 6).map(([lat, lon]): [number, number] => [lon, lat]);
+      });
+    });
+  });
+
+  const api = new RoutingApi();
+  $effect(() => {
+    for (const route of routes) {
+      let [a, ...rest] = route.places;
+      for (const b of rest) {
+        if (!b.navigate) continue;
+
+        const id = key(a, b);
+        if (directions[id]) continue;
+
+        api
+          .route({
+            routeRequest: {
+              locations: [
+                { lon: a.position[0], lat: a.position[1], type: "break" },
+                { lon: b.position[0], lat: b.position[1], type: "break" }
+              ],
+              costing: "auto"
+            }
+          })
+          .then(res => {
+            directions[id] = res.trip.legs[0].shape;
+          });
+
+        a = b;
+      }
+    }
+  });
+  $inspect(lines);
 </script>
 
 <div class="wrapper">
@@ -146,16 +185,11 @@
       <!-- routes -->
       <maplibre-source id="routes" type="geojson">
         <geojson-featurecollection slot="data">
-          {#each routes as route}
+          {#each lines as points}
             <geojson-feature slot="features">
               <geojson-linestring slot="geometry">
-                {#each route.places as place}
-                  <geojson-coordinate
-                    slot="coordinates"
-                    lon={place.position[0]}
-                    lat={place.position[1]}
-                  >
-                  </geojson-coordinate>
+                {#each points as [lon, lat]}
+                  <geojson-coordinate slot="coordinates" {lon} {lat}> </geojson-coordinate>
                 {/each}
               </geojson-linestring>
             </geojson-feature>

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { type PeliasGeoJSONFeature } from "@stadiamaps/api";
-  import type { Place } from "~/lib/place";
 
   import Loader from "~/component/Loader.svelte";
 

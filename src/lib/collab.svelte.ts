@@ -31,7 +31,9 @@ export default class Collab {
 
     this.#provider.awareness.on("change", () => {
       // TODO: actually check types
-      this.local = (this.#provider.awareness.getLocalState() as Peer) || this.#local;
+      const local = (this.#provider.awareness.getLocalState() as Peer) || this.#local;
+      this.local = this.#local = { ...local, cursor: local.cursor || this.#local.cursor };
+
       this.#states = [...this.#provider.awareness.getStates().values()] as Peer[];
     });
   }

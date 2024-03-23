@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { Protocol } from "pmtiles";
-  import { RoutingApi } from "@stadiamaps/api";
+  import { RoutingApi, type RoutingWaypoint } from "@stadiamaps/api";
   import { decode } from "@mapbox/polyline";
   // import layers from "protomaps-themes-base";
 
@@ -37,7 +37,6 @@
   let directions = $state<Record<string, string>>({});
   let lines = $derived.by(() => {
     return routes.map(route => {
-      console.log(route.places);
       return route.places.flatMap((to, i) => {
         if (!to.navigate) return [to.position];
 
@@ -45,6 +44,7 @@
         if (!from) return [to.position];
 
         const shape = directions[key(from, to)];
+        // console.log(`${from.name} -> ${to.name}`, key(from, to), shape);
         if (!shape) return [to.position];
 
         return decode(shape, 6).map(([lat, lon]): [number, number] => [lon, lat]);
@@ -55,28 +55,31 @@
   const api = new RoutingApi();
   $effect(() => {
     for (const route of routes) {
+      // get the current origin (`a`) and the rest of the places
       let [a, ...rest] = route.places;
       for (const b of rest) {
-        if (!b.navigate) continue;
+        // store the origin and destination
+        let origin = a,
+          destination = b;
+        // set the next origin (`a`) to the current destination (`b`)
+        a = b;
 
-        const id = key(a, b);
+        // if not navigating to the destination, just draw a straight line
+        if (!destination.navigate) continue;
+
+        // if the directions between these locations have already been calculated, skip the API request
+        const id = key(origin, destination);
         if (directions[id]) continue;
 
-        api
-          .route({
-            routeRequest: {
-              locations: [
-                { lon: a.position[0], lat: a.position[1], type: "break" },
-                { lon: b.position[0], lat: b.position[1], type: "break" }
-              ],
-              costing: "auto"
-            }
-          })
-          .then(res => {
-            directions[id] = res.trip.legs[0].shape;
-          });
+        // construct the locations
+        const locations: RoutingWaypoint[] = [
+          { lon: origin.position[0], lat: origin.position[1], type: "break" },
+          { lon: destination.position[0], lat: destination.position[1], type: "break" }
+        ];
 
-        a = b;
+        api.route({ routeRequest: { locations, costing: "auto" } }).then(res => {
+          directions[id] = res.trip.legs[0].shape;
+        });
       }
     }
   });
@@ -111,7 +114,7 @@
 
   {#if ready}
     <map-libre class:ready bind:this={map}>
-      <maplibre-options diff style-url="https://tiles.stadiamaps.com/styles/outdoors.json" zoom={7}>
+      <maplibre-options diff style-url="/style.json" zoom={7}>
         {#if places.length}
           <maplibre-bounds slot="bounds" bind:this={bounds}>
             {#each places as place}

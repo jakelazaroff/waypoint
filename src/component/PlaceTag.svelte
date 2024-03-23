@@ -1,5 +1,5 @@
 <script lang="ts">
-  import "@shoelace-style/shoelace/dist/components/tooltip/tooltip.js";
+  import "@shoelace-style/shoelace/dist/components/dropdown/dropdown.js";
 
   interface Props {
     name: string;
@@ -8,17 +8,12 @@
   }
 
   let { name, navigate, onchange } = $props<Props>();
-  let open = $state(false);
 </script>
 
-<button
-  class="tag"
-  onclick={() => {
-    open = !open;
-  }}
->
-  @{name}
-</button>{#if open}
+<sl-dropdown hoist stay-open-on-select>
+  <button class="tag" slot="trigger">
+    @{name}
+  </button>
   <div class="content">
     <label>
       <input
@@ -29,11 +24,11 @@
       <span>Navigate</span>
     </label>
   </div>
-{/if}
+</sl-dropdown>
 
 <style>
-  place-tag {
-    display: block;
+  sl-dropdown {
+    white-space: normal;
   }
 
   .tag {
@@ -45,15 +40,11 @@
   }
 
   .content {
-    display: block;
-    position: absolute;
     border-radius: 8px;
     border-top-left-radius: 0;
-    overflow: hidden;
     width: 20rem;
     background-color: white;
     box-shadow: 0 8px 12px #00000018;
-    z-index: 100;
     padding: 8px;
   }
 

@@ -80,7 +80,6 @@
       }
     }
   });
-  $inspect(lines);
 </script>
 
 <div class="wrapper">

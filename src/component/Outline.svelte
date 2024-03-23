@@ -176,7 +176,7 @@
         name: feature.properties?.name,
         lon: "" + feature.geometry.coordinates[0],
         lat: "" + feature.geometry.coordinates[1],
-        navigate: false
+        navigate: true
       });
     }
   });
@@ -285,6 +285,11 @@
 
   .outline.scrolled::after {
     opacity: 1;
+  }
+
+  .outline :global(:has([aria-expanded="true"])) {
+    position: relative;
+    z-index: 1;
   }
 
   .outline :global(.ProseMirror) {

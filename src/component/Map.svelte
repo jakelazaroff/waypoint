@@ -34,23 +34,19 @@
     return `${a.position[0]},${a.position[1]}_${b.position[0]},${b.position[1]}`;
   }
 
-  let directions = $state<Record<string, string>>({});
-  let lines = $derived.by(() => {
-    return routes.map(route => {
-      return route.places.flatMap((to, i) => {
+  let directions = $state<Record<string, [number, number][]>>({});
+  let lines = $derived.by(() =>
+    routes.map(route =>
+      route.places.flatMap((to, i) => {
         if (!to.navigate) return [to.position];
 
         const from = route.places[i - 1];
         if (!from) return [to.position];
 
-        const shape = directions[key(from, to)];
-        // console.log(`${from.name} -> ${to.name}`, key(from, to), shape);
-        if (!shape) return [to.position];
-
-        return decode(shape, 6).map(([lat, lon]): [number, number] => [lon, lat]);
-      });
-    });
-  });
+        return directions[key(from, to)] || [to.position];
+      })
+    )
+  );
 
   const api = new RoutingApi();
   $effect(() => {
@@ -77,9 +73,15 @@
           { lon: destination.position[0], lat: destination.position[1], type: "break" }
         ];
 
-        api.route({ routeRequest: { locations, costing: "auto" } }).then(res => {
-          directions[id] = res.trip.legs[0].shape;
-        });
+        api
+          .route({ routeRequest: { locations, costing: "auto" } })
+          .then(res => res.trip.legs[0].shape) // get the trip shape
+          .then(shape => decode(shape, 6)) // decode the response
+          .then(points => points.map(([lat, lon]): [number, number] => [lon, lat])) // flip the coordinates
+          .then(points => {
+            // assign the points to the directions object
+            directions[id] = points;
+          });
       }
     }
   });

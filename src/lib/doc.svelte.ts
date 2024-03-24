@@ -84,7 +84,7 @@ export default class Doc {
       const name = el.getAttribute("name");
       const lon = Number(el.getAttribute("lon"));
       const lat = Number(el.getAttribute("lat"));
-      const navigate = Boolean(el.getAttribute("navigate"));
+      const navigate = (el.getAttribute("navigate") as "auto" | null) ?? null;
       if (!name || Number.isNaN(lon) || Number.isNaN(lat)) continue;
 
       // push the place into the results list
@@ -127,7 +127,7 @@ export default class Doc {
         const name = place.getAttribute("name");
         const lon = Number(place.getAttribute("lon"));
         const lat = Number(place.getAttribute("lat"));
-        const navigate = Boolean(place.getAttribute("navigate"));
+        const navigate = (place.getAttribute("navigate") as "auto" | null) ?? null;
         if (!name || Number.isNaN(lon) || Number.isNaN(lat)) continue;
 
         // push the place into the route

@@ -3,7 +3,7 @@
 
   interface Props {
     name: string;
-    navigate: boolean;
+    navigate?: "auto";
     onchange(attr: string, value: any): void;
   }
 
@@ -18,8 +18,8 @@
     <label>
       <input
         type="checkbox"
-        checked={navigate}
-        onchange={e => onchange("navigate", e.currentTarget.checked)}
+        checked={!!navigate}
+        onchange={e => onchange("navigate", e.currentTarget.checked ? "auto" : null)}
       />
       <span>Navigate</span>
     </label>

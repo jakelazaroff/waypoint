@@ -73,8 +73,9 @@
           { lon: destination.position[0], lat: destination.position[1], type: "break" }
         ];
 
+        directions[id] = [destination.position];
         api
-          .route({ routeRequest: { locations, costing: "auto" } })
+          .route({ routeRequest: { locations, costing: destination.navigate } })
           .then(res => res.trip.legs[0].shape) // get the trip shape
           .then(shape => decode(shape, 6)) // decode the response
           .then(points => points.map(([lat, lon]): [number, number] => [lon, lat])) // flip the coordinates

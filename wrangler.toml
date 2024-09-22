@@ -1,4 +1,4 @@
-name = "travel-y-sweet"
+name = "waypoint-y-sweet"
 main = "lib/y-sweet/crates/y-sweet-worker/build/worker/shim.mjs"
 compatibility_date = "2022-01-20"
 

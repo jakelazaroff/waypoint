@@ -17,7 +17,7 @@
 
   let { data } = $props();
 
-  let doc = $derived(Doc.create(data.docId));
+  let doc = $state(Doc.create(data.docId));
   let collab = $derived(
     new Collab(data.url, doc, {
       name: randomUsername(),
@@ -52,12 +52,12 @@
       <Toggle label="numbered list" checked={false} onchange={wrapInNumber}>
         <Icon name="ol" size={12} />
       </Toggle> -->
-      <!-- <Button
+      <Button
         onclick={() => {
           const name = prompt("Enter a file name");
           if (!name) return;
 
-          const file = doc.serialize(`${name}.travel`);
+          const file = doc.serialize(`${name}.waypoint`);
           download(file);
         }}
       >
@@ -68,12 +68,12 @@
         onclick={async () => {
           const [file] = await open();
           const state = new Uint8Array(await file.arrayBuffer());
-          // doc = Doc.parse(state);
+          doc = Doc.parse(state);
         }}
       >
         <Icon name="open" />
         <span class="label">Open</span>
-      </Button> -->
+      </Button>
     </div>
     <div class="group">
       <Input placeholder="Untitled" bind:value={doc.title} />

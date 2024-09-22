@@ -5,7 +5,8 @@ import {
   type AbstractType,
   type RelativePosition,
   encodeStateAsUpdate,
-  applyUpdate
+  applyUpdate,
+  XmlFragment
 } from "yjs";
 import type { Place, Route } from "./place";
 
@@ -72,12 +73,20 @@ export default class Doc {
     return ancestor instanceof XmlElement ? ancestor : this.#outline;
   }
 
+  #places: [Set<ReturnType<XmlFragment["querySelector"]>>, Place[]] = [new Set(), []];
+
   /** Given a relative position, return a list of places within that subtree */
   places(pos?: RelativePosition) {
     const root = this.#subtree(pos);
 
+    const [prev] = this.#places;
+
+    const places = new Set(root.querySelectorAll("place"));
+    if (places.size === prev.size && [...places].every(el => prev.has(el))) return this.#places[1];
+
     const results: Place[] = [];
-    for (const el of root.querySelectorAll("place")) {
+
+    for (const el of places) {
       if (!(el instanceof XmlElement)) continue;
 
       // get the place data
@@ -91,8 +100,11 @@ export default class Doc {
       results.push({ type: "place", name, navigate, position: [lon, lat] });
     }
 
+    this.#places = [places, results];
     return results;
   }
+
+  #routes: [Set<ReturnType<XmlFragment["querySelector"]>>, Route[]] = [new Set(), []];
 
   /** Given a relative position, return a list of routes within that subtree */
   routes(pos?: RelativePosition) {
@@ -100,8 +112,11 @@ export default class Doc {
 
     const results: Route[] = [];
 
-    let routes = root.querySelectorAll("route");
-    if (root instanceof XmlElement && root.nodeName === "route") routes = [root];
+    let routes = new Set(root.querySelectorAll("route"));
+    if (root instanceof XmlElement && root.nodeName === "route") routes = new Set([root]);
+
+    const [prev] = this.#routes;
+    if (routes.size === prev.size && [...routes].every(el => prev.has(el))) return this.#routes[1];
 
     for (const route of routes) {
       if (!(route instanceof XmlElement)) continue;
@@ -138,6 +153,7 @@ export default class Doc {
       if (result.places.length) results.push(result);
     }
 
+    this.#routes = [routes, results];
     return results;
   }
 

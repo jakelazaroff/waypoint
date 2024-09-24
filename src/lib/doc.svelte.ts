@@ -115,8 +115,8 @@ export default class Doc {
     let routes = new Set(root.querySelectorAll("route"));
     if (root instanceof XmlElement && root.nodeName === "route") routes = new Set([root]);
 
-    const [prev] = this.#routes;
-    if (routes.size === prev.size && [...routes].every(el => prev.has(el))) return this.#routes[1];
+    // const [prev] = this.#routes;
+    // if (routes.size === prev.size && [...routes].every(el => prev.has(el))) return this.#routes[1];
 
     for (const route of routes) {
       if (!(route instanceof XmlElement)) continue;

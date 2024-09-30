@@ -8,6 +8,7 @@ import {
   applyUpdate,
   XmlFragment
 } from "yjs";
+import { IndexeddbPersistence } from "y-indexeddb";
 import type { Place, Route } from "./place";
 
 export default class Doc {
@@ -34,6 +35,7 @@ export default class Doc {
 
   constructor(ydoc = new YDoc()) {
     this.ydoc = ydoc;
+    new IndexeddbPersistence(this.guid, this.ydoc);
 
     // HACK places: the yjs doc is mutated internally, so we need to manually invalidate the reactive variable
     this.#invalidate();

@@ -1,26 +1,16 @@
 .DEFAULT_GOAL = help
 
 ##@ Development
-.PHONY: dev dev-client dev-serve
+.PHONY: dev
 
 dev: ## Run the app in development
-	@make -j 2 dev-client dev-server
-
-dev-client:
 	@pnpm dev
 
-dev-server:
-	@pnpm ysweet
-
 ##@ Deploying
-.PHONY: build deploy
+.PHONY: build
 
 build: ## Build the web client
 	@pnpm build
-
-deploy: ## Deploy the y-sweet worker
-	@cd lib/y-sweet/crates/y-sweet-worker && ./build.sh
-	@pnpm wrangler deploy
 
 ##@ Help
 .PHONY: help

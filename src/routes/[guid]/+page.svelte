@@ -19,7 +19,7 @@
 
   let doc = $state(Doc.create(data.docId));
   let collab = $derived(
-    new Collab(data.url, doc, {
+    new Collab(doc, {
       name: randomUsername(),
       color: randomColor()
     })
